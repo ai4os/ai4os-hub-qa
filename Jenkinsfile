@@ -4,14 +4,23 @@
     'github.com/indigo-dc/jenkins-pipeline-library@release/2.1.1',
 ]) _
 
+
 def projectConfig
 
 pipeline {
     agent {
         label 'docker'
     }
-
+    
     stages {
+
+        stage("User Jenkinsfile") {
+            steps {
+                script {
+                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
+                }
+            }
+        }
         stage('AI4OS Hub SQA baseline dynamic stages') {
             steps {
                 script {
@@ -106,3 +115,4 @@ pipeline {
         }
     }
 }
+
