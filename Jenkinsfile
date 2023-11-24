@@ -14,7 +14,7 @@ pipeline {
     
     stages {
 
-        stage("User Jenkinsfile") {
+        stage("User pipeline job") {
             steps {
                 script {
                     build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
