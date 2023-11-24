@@ -1,0 +1,9 @@
+# .sqa/config.yml - jenkins-pipeline-library configuration file
+
+sqa_criteria:
+  qc_style:
+    repos:
+      thisrepo:
+        container: thisrepo-testing
+        commands:
+          - ai4-metadata-validator /repo/metadata.json

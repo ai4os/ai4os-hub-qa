@@ -1,0 +1,10 @@
+version: "3.6"
+
+services:
+  thisrepo-testing:
+    image: "ifcacomputing/ci-images:python3.12"
+    hostname: "thisrepo-testing-host"
+    volumes:
+     - type: bind
+       source: ./
+       target: /repo
