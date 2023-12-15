@@ -72,7 +72,7 @@ pipeline {
                         docker_tag = env.BRANCH_NAME.drop(8)
                     }
                     else if ( env.BRANCH_NAME in ['master', 'main'] ) {
-                        docker_tag = latest
+                        docker_tag = "latest"
                     }
                     else {
                         docker_tag = env.BRANCH_NAME
