@@ -1,5 +1,8 @@
 # .sqa/config.yml - jenkins-pipeline-library configuration file
 
+config:
+  deploy_template: '_ai4os-hub-qa/.sqa/docker-compose.yml'
+
 sqa_criteria:
   qc_style:
     repos:

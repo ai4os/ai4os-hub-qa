@@ -13,7 +13,6 @@ pipeline {
     }
     
     stages {
-
         stage("User pipeline job") {
             steps {
                 script {
@@ -23,9 +22,14 @@ pipeline {
         }
         stage('AI4OS Hub SQA baseline dynamic stages') {
             steps {
+                sh 'mkdir -p _ai4os-hub-qa'
+                dir("_ai4os-hub-qa") {
+                    git branch: "master",
+                    url: 'https://github.com/ai4os/ai4os-hub-qa'
+                }
                 script {
                     projectConfig = pipelineConfig(
-                        configFile: ".sqa/ai4eosc.yml"
+                        configFile: "_ai4os-hub-qa/.sqa/ai4eosc.yml"
                     )
                     buildStages(projectConfig)
                 }
