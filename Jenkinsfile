@@ -13,13 +13,13 @@ pipeline {
     }
 
     stages {
-        // stage("User pipeline job") {
-        //     steps {
-        //         script {
-        //             build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
-        //         }
-        //     }
-        // }
+        stage("User pipeline job") {
+            steps {
+                script {
+                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
+                }
+            }
+        }
         stage('AI4OS Hub SQA baseline dynamic stages') {
             steps {
                 sh 'mkdir -p _ai4os-hub-qa'
@@ -84,10 +84,12 @@ pipeline {
                     }
                     docker_tag = docker_tag.toLowerCase()
 
-                    // get docker repository name from metadata.json
+                    // get docker image name from metadata.json
                     meta = readJSON file: "metadata.json"
                     image_name = meta["sources"]["docker_registry_repo"].split("/")[1]
 
+                    // use preconfigured in Jenkins docker_repository
+                    // XXX may confuse users? (e.g. expect xyz/myimage, but we push to ai4hub/myimage)
                     image = docker_repository + "/" + image_name + ":" + docker_tag
 
                     // build docker images
@@ -97,23 +99,32 @@ pipeline {
                     def base_gpu_tag = ""
                     def build_cpu_tag = false
                     def build_gpu_tag = false
-                    // try to load constants if defined in user's repository
+                    // try to load constants if defined in user's repository ($jenkinsconstants_file has to be in the repo root)
+                    jenkinsconstants_file = "JenkinsConstants.groovy"
                     try {
-                        def constants = load 'JenkinsConstants.groovy'
-                        base_cpu_tag = constants.base_cpu_tag
-                        base_gpu_tag = constants.base_gpu_tag
-                        if (constants.dockerfile) {
+                        def constants = load jenkinsconstants_file
+                        // $jenkinsconstants_file may have all constants or only "dockefile" or only both base_cpu|gpu_tag:
+                        try {
                             dockerfile = constants.dockerfile
+                        } catch (e) {}
+                        // let's define that if used, both "base_cpu_tag" && "base_gpu_tag" are required:
+                        try {
+                            base_cpu_tag = constants.base_cpu_tag
+                        } catch (e) {}
+                        try {
+                            base_gpu_tag = constants.base_gpu_tag
+                        } catch (e) {}
+                        if (!base_cpu_tag && !base_gpu_tag) {
+                            throw new Exception("Neither \"base_cpu_tag\" nor \"base_gpu_tag\" is defined. Using default tag from ${dockerfile}")
                         }
-                        // let's require that either both "base_cpu_tag" && "base_gpu_tag" are defined or none
                         if (!base_cpu_tag || !base_gpu_tag) {
-                            throw new Exception("Check JenkinsConstants.groovy: Either both \"base_cpu_tag\" and \"base_gpu_tag\" are defined or none")
+                            throw new Exception("Check ${jenkinsconstants_file}: If separate tags for CPU and GPU are needed, both \"base_cpu_tag\" and \"base_gpu_tag\" are required!")
                         }
                         // if no Exception so far, allow building "-cpu" and "-gpu" versions
                         build_cpu_tag = true
                         build_gpu_tag = true
                     } catch (err) {
-                        // if JenkinsConstants.groovy not found or one of base_cpu|gpu_tag not defined, build docker image with default params
+                        // if $jenkinsconstants_file not found or one of base_cpu|gpu_tag is not defined or none of them, build docker image with default params
                         println("[WARNING] Exception: ${err}")
                         println("[INFO] Using default parameters for Docker image building")
                         image_id = docker.build(image, "--no-cache --force-rm -f ${dockerfile} .")
@@ -128,14 +139,16 @@ pipeline {
                         docker_ids.add(image_cpu)
                     }
 
-                    // check that in the built (cpu or default) image, DEEPaaS API starts as expected
+                    // check that in the built image (cpu or default), DEEPaaS API starts as expected
+                    // do it with only "cpu|default" image: 
+                    // a) can stop before proceeding with "gpu" version b) "gpu" may fail without GPU hardware anyway
                     sh "git clone https://github.com/ai4os/ai4os-hub-check-artifact"
                     sh "bash ai4os-hub-check-artifact/check-artifact ${image}"
                     sh "rm -rf ai4os-hub-check-artifact"
 
                     docker_ids.add(image)
 
-                    // finally, let's build "-gpu" image, if configured
+                    // finally, build "-gpu" image, if configured
                     if (build_gpu_tag) {
                         // define additional docker_tag_gpu to mark "gpu" version
                         docker_tag_gpu = (docker_tag == "latest") ? "gpu" : (docker_tag + "-gpu")
