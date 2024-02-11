@@ -72,15 +72,7 @@ pipeline {
                 checkout scm
 
                 script {
-                    // load constants defined in user's repository
-                    def constants = load 'JenkinsConstants.groovy'
-                    env.base_cpu_tag = constants.base_cpu_tag
-                    env.base_gpu_tag = constants.base_gpu_tag
-                    def dockerfile = "Dockerfile"
-                    if (constants.dockerfile) {
-                        dockerfile = constants.dockerfile
-                    }
-                    // define docker tag
+                    // define docker tag depending on the branch/release
                     if ( env.BRANCH_NAME.startsWith("release/") ) {
                         docker_tag = env.BRANCH_NAME.drop(8)
                     }
@@ -91,43 +83,65 @@ pipeline {
                         docker_tag = env.BRANCH_NAME
                     }
                     docker_tag = docker_tag.toLowerCase()
-            
-                    // FIXME(aloga): this needs to be improved
-                    echo env.base_cpu_tag
-                    echo env.base_gpu_tag
-                    echo "${env.base_cpu_tag}"
-                    echo "${env.base_gpu_tag}"
-                    echo dockerfile
-                    // get docker repository name
+
+                    // get docker repository name from metadata.json
                     meta = readJSON file: "metadata.json"
                     image_repo = meta["sources"]["docker_registry_repo"].split("/")[1]
 
                     image_name = docker_repository + "/" + image_repo + ":" + docker_tag
-                    if (env.base_cpu_tag) {
-                        image = docker.build(image_name, "--no-cache --force-rm --build-arg tag=${env.base_cpu_tag} -f ${dockerfile} .")
-                        // if (docker_tag == "latest") {
-                        //     image_cpu = docker.image(image_name).tag["latest","cpu"]
-                        // }
-                        // else {
-                        //     image_cpu = docker.image(image_name).tag["latest",("cpu-" + docker_tag)]
-                        // }
-                        // docker_ids.add(image_cpu)
-                    }
-                    else {
+
+                    // build docker images
+                    // by default we expect Dockerfile name and location in the git repo root
+                    def dockerfile = "Dockerfile"
+                    def base_cpu_tag = ""
+                    def base_gpu_tag = ""
+                    def build_cpu_tag = false
+                    def build_gpu_tag = false
+                    // try to load constants if defined in user's repository
+                    try {
+                        def constants = load 'JenkinsConstants.groovy'
+                        base_cpu_tag = constants.base_cpu_tag
+                        base_gpu_tag = constants.base_gpu_tag
+                        if (constants.dockerfile) {
+                            dockerfile = constants.dockerfile
+                        }
+                        // let's require that either both "base_cpu_tag" && "base_gpu_tag" are defined or none
+                        if (!base_cpu_tag || !base_gpu_tag) {
+                            throw new Exception("Check JenkinsConstants.groovy: Either both \"base_cpu_tag\" and \"base_gpu_tag\" are defined or none")
+                        }
+                        // if no Exception so far, allow building "-cpu" and "-gpu" versions
+                        build_cpu_tag = true
+                        build_gpu_tag = true
+                    } catch (err) {
+                        // if JenkinsConstants.groovy not found or one of base_cpu|gpu_tag not defined, build docker image with default params
+                        println("[WARNING] Exception: ${err}")
+                        println("[INFO] Using default parameters for Docker image building")
                         image = docker.build(image_name, "--no-cache --force-rm -f ${dockerfile} .")
                     }
-                    docker_ids.add(image)
-                    
-                    // check built image for DEEPaaS API reponse
+                    // build "-cpu" image, if configured
+                    if (build_cpu_tag) {
+                        image = docker.build(image_name, "--no-cache --force-rm --build-arg tag=${base_cpu_tag} -f ${dockerfile} .")
+                        // define additional docker_tag_cpu to mark it as "cpu" version
+                        docker_tag_cpu = (docker_tag == "latest") ? "cpu" : (docker_tag + "-cpu")
+                        image_name_cpu = docker_repository + "/" + image_repo + ":" + docker_tag_cpu
+                        sh "docker tag ${image_name} ${image_name_cpu}"
+                        docker_ids.add(image_name_cpu)
+                    }
+
+                    // check that in the built (cpu or default) image, DEEPaaS API starts as expected
                     sh "git clone https://github.com/ai4os/ai4os-hub-check-artifact"
                     sh "bash ai4os-hub-check-artifact/check-artifact ${image_name}"
                     sh "rm -rf ai4os-hub-check-artifact"
 
-                    if (env.base_gpu_tag) {
-                        docker_tag = (docker_tag == "latest") ? "gpu" : ("gpu-" + docker_tag)
-                        image_name = docker_repository + "/" + image_repo + ":" + docker_tag
-                        image_gpu = docker.build(image_name, "--no-cache --force-rm --build-arg tag=${env.base_gpu_tag}  -f ${dockerfile} .")
-                        docker_ids.add(image_gpu)
+                    docker_ids.add(image_name)
+
+                    // finally, let's build "-gpu" image, if configured
+                    if (build_gpu_tag) {
+                        // define additional docker_tag_gpu to mark "gpu" version
+                        docker_tag_gpu = (docker_tag == "latest") ? "gpu" : (docker_tag + "-gpu")
+                        image_name = docker_repository + "/" + image_repo + ":" + docker_tag_gpu
+                        image = docker.build(image_name, "--no-cache --force-rm --build-arg tag=${base_gpu_tag}  -f ${dockerfile} .")
+                        docker_ids.add(image_name)
                     }
 
                 }
@@ -136,12 +150,10 @@ pipeline {
         stage('AI4OS Hub Docker delivery to registry') {
             steps {
                 script {
-                    echo "${env.base_cpu_tag}"
-                    echo "${env.base_gpu_tag}"
                     docker.withRegistry(docker_registry, docker_registry_credentials) {
                         docker_ids.each {
                             echo "${it}"
-                            it.push()
+                            docker.image(it).push()
                         }
                     }
                 }
