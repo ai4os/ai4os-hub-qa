@@ -19,15 +19,15 @@ pipeline {
         GITMODULES_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         GITMODULES = sh (returnStdout: true, script: "curl -s ${GITMODULES_URL}").trim()
         MODULE_FOUND = GITMODULES.contains(env.THIS_REPO)
+        sh 'printenv'
     }
 
     stages {
         stage("User pipeline job") {
             when {
-                expression {env.MODULE_FOUND = true}
+                expression {env.MODULE_FOUND == true}
             }
             steps {
-                sh 'printenv'
                 script {
                     build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
                 }
@@ -35,7 +35,7 @@ pipeline {
         }
         stage('AI4OS Hub SQA baseline dynamic stages') {
             when {
-                expression {env.MODULE_FOUND = true}
+                expression {env.MODULE_FOUND == true}
             }
             steps {
                 sh 'mkdir -p _ai4os-hub-qa'
@@ -83,6 +83,7 @@ pipeline {
                     branch 'dev'
                     branch 'release/*'
                 }
+                expression {env.MODULE_FOUND == true}
             }
             steps {
                 checkout scm
@@ -178,7 +179,7 @@ pipeline {
         }
         stage('AI4OS Hub Docker delivery to registry') {
             when {
-                expression {env.MODULE_FOUND = true}
+                expression {env.MODULE_FOUND == true}
             }
             steps {
                 script {
