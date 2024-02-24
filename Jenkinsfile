@@ -19,7 +19,6 @@ pipeline {
         GITMODULES_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         GITMODULES = sh (returnStdout: true, script: "curl -s ${GITMODULES_URL}").trim()
         MODULE_FOUND = GITMODULES.contains(env.THIS_REPO)
-        sh 'printenv'
     }
 
     stages {
@@ -60,6 +59,7 @@ pipeline {
 
         stage("Variable initialization") {
             steps {
+                sh 'printenv'
                 script {
                     withFolderProperties{
                         docker_registry = env.AI4OS_REGISTRY
