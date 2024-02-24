@@ -14,10 +14,10 @@ pipeline {
 
     environment {
         // Remove .git from the GIT_URL link
-        THIS_REPO="${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
-        GITMODULES_URL="https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
-        GITMODULES=sh (returnStdout: true, script: 'curl -s $GITMODULES_URL').trim()
-        MODULE_FOUND=GITMODULES.contains(env.THIS_REPO)
+        THIS_REPO = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
+        GITMODULES_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
+        GITMODULES = sh (returnStdout: true, script: "curl -s ${GITMODULES_URL}").trim()
+        MODULE_FOUND = GITMODULES.contains(env.THIS_REPO)
     }
 
     stages {
