@@ -87,17 +87,17 @@ pipeline {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
             steps {
-                // Initialize where to push docker images
-                withFolderProperties{
-                    docker_registry = env.AI4OS_REGISTRY
-                    docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
-                    docker_repository = env.AI4OS_REGISTRY_REPOSITORY
-                }
-                docker_ids = []
-
                 checkout scm
 
                 script {
+                    // Initialize where to push docker images
+                    withFolderProperties{
+                        docker_registry = env.AI4OS_REGISTRY
+                        docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
+                        docker_repository = env.AI4OS_REGISTRY_REPOSITORY
+                    }
+                    docker_ids = []
+
                     // define docker tag depending on the branch/release
                     if ( env.BRANCH_NAME.startsWith("release/") ) {
                         docker_tag = env.BRANCH_NAME.drop(8)
