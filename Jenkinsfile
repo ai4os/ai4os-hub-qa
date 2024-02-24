@@ -15,6 +15,7 @@ pipeline {
     environment {
         // Remove .git from the GIT_URL link
         THIS_REPO = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
+        // Check if Repository is listed in .modules-catalog/.gitmodules
         GITMODULES_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         GITMODULES = sh (returnStdout: true, script: "curl -s ${GITMODULES_URL}").trim()
         MODULE_FOUND = GITMODULES.contains(env.THIS_REPO)
@@ -22,6 +23,9 @@ pipeline {
 
     stages {
         stage("User pipeline job") {
+            when {
+                expression {env.MODULE_FOUND = true}
+            }
             steps {
                 sh 'printenv'
                 script {
@@ -30,6 +34,9 @@ pipeline {
             }
         }
         stage('AI4OS Hub SQA baseline dynamic stages') {
+            when {
+                expression {env.MODULE_FOUND = true}
+            }
             steps {
                 sh 'mkdir -p _ai4os-hub-qa'
                 dir("_ai4os-hub-qa") {
@@ -170,6 +177,9 @@ pipeline {
             }
         }
         stage('AI4OS Hub Docker delivery to registry') {
+            when {
+                expression {env.MODULE_FOUND = true}
+            }
             steps {
                 script {
                     docker.withRegistry(docker_registry, docker_registry_credentials) {
