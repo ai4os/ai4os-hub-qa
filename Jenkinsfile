@@ -22,11 +22,9 @@ pipeline {
     }
 
     stages {
-        stage("User pipeline job") {
-            when {
-                expression {env.MODULE_FOUND == true}
-            }
+        stage("App pipeline job") {
             steps {
+                sh 'printenv'
                 script {
                     build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
                 }
@@ -34,7 +32,7 @@ pipeline {
         }
         stage('AI4OS Hub SQA baseline dynamic stages') {
             when {
-                expression {env.MODULE_FOUND == true}
+                expression {env.GITMODULES.contains(env.THIS_REPO)}
             }
             steps {
                 sh 'mkdir -p _ai4os-hub-qa'
@@ -59,7 +57,6 @@ pipeline {
 
         stage("Variable initialization") {
             steps {
-                sh 'printenv'
                 script {
                     withFolderProperties{
                         docker_registry = env.AI4OS_REGISTRY
@@ -83,7 +80,7 @@ pipeline {
                     branch 'dev'
                     branch 'release/*'
                 }
-                expression {env.MODULE_FOUND == true}
+                expression {env.GITMODULES.contains(env.THIS_REPO)}
             }
             steps {
                 checkout scm
@@ -179,7 +176,7 @@ pipeline {
         }
         stage('AI4OS Hub Docker delivery to registry') {
             when {
-                expression {env.MODULE_FOUND == true}
+                expression {env.GITMODULES.contains(env.THIS_REPO)}
             }
             steps {
                 script {
