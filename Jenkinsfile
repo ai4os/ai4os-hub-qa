@@ -12,15 +12,27 @@ pipeline {
         label 'docker'
     }
 
+    environment {
+        // Remove .git from the GIT_URL link
+        THIS_REPO = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
+        // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
+        MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
+        MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
+    }
+
     stages {
-        stage("User pipeline job") {
+        stage("App/Tool pipeline job") {
             steps {
+                //sh 'printenv'
                 script {
                     build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
                 }
             }
         }
         stage('AI4OS Hub SQA baseline dynamic stages') {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+            }
             steps {
                 sh 'mkdir -p _ai4os-hub-qa'
                 dir("_ai4os-hub-qa") {
@@ -42,23 +54,27 @@ pipeline {
         }
     
 
-        stage("Variable initialization") {
-            steps {
-                script {
-                    withFolderProperties{
-                        docker_registry = env.AI4OS_REGISTRY
-                        docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
-                        docker_repository = env.AI4OS_REGISTRY_REPOSITORY
-                    }
-                    docker_ids = []
+// Do we really need a stage for this? Moved to the next stage "Docker image build"
+//        stage("Variable initialization") {
+//            when {
+//                expression {env.MODULES.contains(env.THIS_REPO)}
+//            }
+//            steps {
+//                script {
+//                    withFolderProperties{
+//                        docker_registry = env.AI4OS_REGISTRY
+//                        docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
+//                        docker_repository = env.AI4OS_REGISTRY_REPOSITORY
+//                    }
+//                    docker_ids = []
+//
+//                    // Check here if variables exist
+//                }
+//            }
+//        }
 
-                    // Check here if variables exist
-                }
-            }
-        }
 
-
-        stage('AI4OS Hub Docker image build') {
+        stage('AI4OS Hub Docker images build') {
             when {
                 anyOf {
                     branch 'main'
@@ -67,11 +83,20 @@ pipeline {
                     branch 'dev'
                     branch 'release/*'
                 }
+                expression {env.MODULES.contains(env.THIS_REPO)}
             }
             steps {
                 checkout scm
 
                 script {
+                    // Initialize where to push docker images
+                    withFolderProperties{
+                        docker_registry = env.AI4OS_REGISTRY
+                        docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
+                        docker_repository = env.AI4OS_REGISTRY_REPOSITORY
+                    }
+                    docker_ids = []
+
                     // define docker tag depending on the branch/release
                     if ( env.BRANCH_NAME.startsWith("release/") ) {
                         docker_tag = env.BRANCH_NAME.drop(8)
@@ -161,6 +186,9 @@ pipeline {
             }
         }
         stage('AI4OS Hub Docker delivery to registry') {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+            }
             steps {
                 script {
                     docker.withRegistry(docker_registry, docker_registry_credentials) {
