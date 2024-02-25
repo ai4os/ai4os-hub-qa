@@ -18,13 +18,12 @@ pipeline {
         // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
         MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
-        MODULE_FOUND = MODULES.contains(env.THIS_REPO)
     }
 
     stages {
         stage("App/Tool pipeline job") {
             steps {
-                sh 'printenv'
+                //sh 'printenv'
                 script {
                     build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
                 }
