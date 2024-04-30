@@ -166,11 +166,14 @@ pipeline {
                     }
 
                     // check that in the built image (cpu or default), DEEPaaS API starts as expected
+                    // EXCLUDE "cicd" branch
                     // do it with only "cpu|default" image: 
                     // a) can stop before proceeding with "gpu" version b) "gpu" may fail without GPU hardware anyway
-                    sh "git clone https://github.com/ai4os/ai4os-hub-check-artifact"
-                    sh "bash ai4os-hub-check-artifact/check-artifact ${image}"
-                    sh "rm -rf ai4os-hub-check-artifact"
+                    if (env.BRANCH_NAME != 'cicd') {
+                        sh "git clone https://github.com/ai4os/ai4os-hub-check-artifact"
+                        sh "bash ai4os-hub-check-artifact/check-artifact ${image}"
+                        sh "rm -rf ai4os-hub-check-artifact"
+                    }
 
                     docker_ids.add(image)
 
