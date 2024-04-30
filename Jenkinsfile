@@ -77,6 +77,7 @@ pipeline {
         stage('AI4OS Hub Docker images build') {
             when {
                 anyOf {
+                    branch 'cicd'
                     branch 'main'
                     branch 'master'
                     branch 'test'
