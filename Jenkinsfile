@@ -328,6 +328,35 @@ pipeline {
             }
         }
 
+        stage('Enable Zenodo Github integration') {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+            }
+            environment {
+                ZENODO_TOKEN = credentials('zenodo')
+            }
+            steps {
+                checkout scm
+                script {
+                    withFolderProperties{
+                        zenodo_api_url = env.ZENODO_API_URL
+                        zenodo_community = env.ZENODO_COMMUNITY
+                    }
+                    // Get repository ID from GitHub API
+                    github_api_url = env.THIS_REPO.replace("github.com", "api.github.com/repos")
+                    repo_id = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
+
+                    // Enable Zenodo integration
+                    httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
+                                httpMode: 'POST',
+                                url: "${zenodo_api_url}user/github/repositories/${repo_id}/enable"
+
+                    // TODO: create record if not yet created
+                    // TODO: add record to community
+                }
+            }
+        }
+
         stage("Update Catalog page") {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
