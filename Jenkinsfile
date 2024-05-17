@@ -345,14 +345,90 @@ pipeline {
                     // Get repository ID from GitHub API
                     github_api_url = env.THIS_REPO.replace("github.com", "api.github.com/repos")
                     repo_id = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
+                    // Get webhook URL form GitHub API
+                    response = httpRequest authentication: 'github-ai4os-hub-alvarolopez',
+                               httpMode: 'GET',
+                               url: "${github_api_url}/hooks"
 
-                    // Enable Zenodo integration
+                    content = readJSON text: response.content
+
+                    for (entry in content) {
+                        if (entry.config.url.startsWith(zenodo_api_url)) {
+                            println("Zenodo webhook already enabled")
+                            // If hook_url is defined, terminate the stage
+                            need_zenodo_retrigger = false
+                            return
+                        }
+                    }
+                    
+                    need_zenodo_retrigger = true
+                    // Otherwise, enable Zenodo integration
                     httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
                                 httpMode: 'POST',
                                 url: "${zenodo_api_url}user/github/repositories/${repo_id}/enable"
+                    
+                }
+            }
+        }
 
-                    // TODO: create record if not yet created
-                    // TODO: add record to community
+        stage('Trigger Zenodo webhook on first integration') {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {need_zenodo_retrigger}
+            }
+            environment {
+                ZENODO_TOKEN = credentials('zenodo')  
+            }
+            steps {
+                checkout scm
+                script {
+                    withFolderProperties{
+                        zenodo_api_url = env.ZENODO_API_URL
+                        zenodo_community = env.ZENODO_COMMUNITY
+                    }
+
+                    // Get webhook URL form GitHub API
+                    response = httpRequest authentication: 'github-ai4os-hub-alvarolopez',
+                               httpMode: 'GET',
+                               url: "${github_api_url}/hooks"
+
+                    content = readJSON text: response.content
+
+                    for (entry in content) {
+                        if (entry.config.url.startsWith(zenodo_api_url)) {
+                            println("Zenodo webhook enabled")
+                            hook_url = entry.config.url
+                        }
+                    }
+                    // Now, retrigger all releases to trigger Zenodo integration
+                    
+                    repository = sh (returnStdout: true, script: "curl -s ${github_api_url}").trim()
+
+                    // Get all relreases from GitHub API
+                    releases = httpRequest authentication: 'github-ai4os-hub-alvarolopez',
+                               httpMode: 'GET',
+                               url: "${github_api_url}/releases"
+                    releases = readJSON text: releases.content
+
+                    // Uncomment this to retrigger all releases in reverse order, 
+                    // and comment the next line
+                    // releases = releases.reverse()
+                    // Sync only the last release
+                    releases = [releases[0]] 
+
+
+                    for (release in releases) {
+                        println("Retriggering release: ${release.tag_name}")
+                        release = writeJSON returnText: true, json: release
+
+                        requestBody = '{"action": "published", "release": ' + release + ', "repository": ' + repository + '}'
+                        httpRequest httpMode: 'POST',
+                                    acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON',
+                                    url: hook_url,
+                                    quiet: true,
+                                    requestBody: requestBody,
+                                    validResponseCodes: "202,409"
+                    }
                 }
             }
         }
