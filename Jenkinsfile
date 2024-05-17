@@ -53,26 +53,28 @@ pipeline {
             }
         }
     
+        stage("Variable initialization") {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+            }
+            environment {
+                AI4OS_REGISTRY_CREDENTIALS = credentials('AIOS-registry-credentials')
+            }
+            steps {
+                script {
+                    withFolderProperties{
+                        docker_registry = env.AI4OS_REGISTRY
+                        docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
+                        docker_repository = env.AI4OS_REGISTRY_REPOSITORY
+                    }
+                    docker_ids = []
+                    
+                    docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
 
-// Do we really need a stage for this? Moved to the next stage "Docker image build"
-//        stage("Variable initialization") {
-//            when {
-//                expression {env.MODULES.contains(env.THIS_REPO)}
-//            }
-//            steps {
-//                script {
-//                    withFolderProperties{
-//                        docker_registry = env.AI4OS_REGISTRY
-//                        docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
-//                        docker_repository = env.AI4OS_REGISTRY_REPOSITORY
-//                    }
-//                    docker_ids = []
-//
-//                    // Check here if variables exist
-//                }
-//            }
-//        }
-
+                    // Check here if variables exist
+                }
+            }
+        }
 
         stage('AI4OS Hub Docker images build') {
             when {
@@ -86,21 +88,10 @@ pipeline {
                 }
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
-            environment {
-                AI4OS_REGISTRY_CREDENTIALS = credentials('AIOS-registry-credentials')
-            }
             steps {
                 checkout scm
 
                 script {
-                    // Initialize where to push docker images
-                    withFolderProperties{
-                        docker_registry = env.AI4OS_REGISTRY
-                        // docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
-                        docker_repository = env.AI4OS_REGISTRY_REPOSITORY
-                    }
-                    docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
-                    docker_ids = []
 
                     // define docker tag depending on the branch/release
                     if ( env.BRANCH_NAME.startsWith("release/") ) {
