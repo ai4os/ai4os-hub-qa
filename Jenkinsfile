@@ -344,9 +344,10 @@ pipeline {
                     }
                     // Get repository ID from GitHub API
                     github_api_url = env.THIS_REPO.replace("github.com", "api.github.com/repos")
+                    // Get repository ID from GitHub API
                     repo_id = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
                     // Get webhook URL form GitHub API
-                    response = httpRequest authentication: 'github-ai4os-hub-alvarolopez',
+                    response = httpRequest authentication: 'github-ai4os-hub',
                                httpMode: 'GET',
                                url: "${github_api_url}/hooks"
 
@@ -388,7 +389,7 @@ pipeline {
                     }
 
                     // Get webhook URL form GitHub API
-                    response = httpRequest authentication: 'github-ai4os-hub-alvarolopez',
+                    response = httpRequest authentication: 'github-ai4os-hub',
                                httpMode: 'GET',
                                url: "${github_api_url}/hooks"
 
@@ -405,7 +406,7 @@ pipeline {
                     repository = sh (returnStdout: true, script: "curl -s ${github_api_url}").trim()
 
                     // Get all relreases from GitHub API
-                    releases = httpRequest authentication: 'github-ai4os-hub-alvarolopez',
+                    releases = httpRequest authentication: 'github-ai4os-hub',
                                httpMode: 'GET',
                                url: "${github_api_url}/releases"
                     releases = readJSON text: releases.content
