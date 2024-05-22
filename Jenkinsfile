@@ -510,7 +510,7 @@ pipeline {
 
 
                     // Now, crete a PR using GitHub API
-                    pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata.json file. The obtained Zenodo DOI is ${zenodo_doi}, please veryfi chat this corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
+                    pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata.json file. The obtained Zenodo DOI is ${zenodo_doi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
                     pr_title = "Add Zenodo DOI to metadata.json"
                     pr_head = "zenodo-integration-${BUILD_NUMBER}"
                     pr = """{
