@@ -483,8 +483,8 @@ pipeline {
                     // If Zenodo DOI is not in metadata.json, add it
                     if (!meta["sources"].containsKey("zenodo_doi")) {
                         meta["sources"]["zenodo_doi"] = zenodo_doi
-                        // write JSON to file
-                        writeJSON file: "metadata.json", json: meta
+
+                        writeJSON file: "metadata.json", json: meta, pretty: 4
                     }
 
                     // Setup git user
