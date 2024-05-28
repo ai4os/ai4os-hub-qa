@@ -29,7 +29,7 @@ pipeline {
                 }
             }
         }
-        stage('AI4OS Hub V1 metadata validation') {
+        stage('AI4OS Hub metadata V1 validation') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
@@ -65,7 +65,7 @@ pipeline {
                 }
             }
         }
-        stage('AI4OS Hub V2 metadata validation') {
+        stage('AI4OS Hub metadata V2 validation') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
