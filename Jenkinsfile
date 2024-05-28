@@ -29,7 +29,7 @@ pipeline {
                 }
             }
         }
-        stage('AI4OS Hub metadata validation') {
+        stage('AI4OS Hub V1 metadata validation') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
@@ -39,6 +39,12 @@ pipeline {
                 }
             }
             steps {
+                script {
+                    // Check if .metadata.json is present in the repository
+                    if (!fileExists("metadata.json")) {
+                        error("metadata.json file not found in the repository")
+                    }
+                }
                 dir("ai4os-hub-metadata") {
                     // Checkout the repository, at tag v1.0.0
                     checkout([
