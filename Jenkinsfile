@@ -29,26 +29,33 @@ pipeline {
                 }
             }
         }
-        stage('AI4OS Hub SQA baseline dynamic stages') {
+        stage('AI4OS Hub metadata validation') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
-            steps {
-                sh 'mkdir -p _ai4os-hub-qa'
-                dir("_ai4os-hub-qa") {
-                    git branch: "master",
-                    url: 'https://github.com/ai4os/ai4os-hub-qa'
-                }
-                script {
-                    projectConfig = pipelineConfig(
-                        configFile: "_ai4os-hub-qa/.sqa/ai4eosc.yml"
-                    )
-                    buildStages(projectConfig)
+            agent {                 
+                docker {
+                    image 'python:3.12'
                 }
             }
-            post {
-                cleanup {
-                    cleanWs()
+            steps {
+                dir("ai4os-hub-metadata") {
+                    // Checkout the repository, at tag v1.0.0
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: 'refs/tags/1.0.0']],
+                        userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
+                    ])  
+                }
+                withEnv([
+                    "HOME=${env.WORKSPACE}",
+                ]) {
+                    script {
+                        // Install script and dependencies
+                        sh "cd ai4os-hub-metadata && pip install ."
+                        // Now run the script
+                        sh ".local/bin/ai4-metadata-validator metadata.json"
+                    }
                 }
             }
         }
