@@ -104,7 +104,7 @@ pipeline {
             }
         }
     
-        stage("Variable initialization") {
+        stage("Docker Variable initialization") {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
