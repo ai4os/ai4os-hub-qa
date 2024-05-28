@@ -1,12 +1,5 @@
 // vim: filetype=groovy
 
-@Library([
-    'github.com/indigo-dc/jenkins-pipeline-library@release/2.1.1',
-]) _
-
-
-def projectConfig
-
 pipeline {
     agent {
         label 'docker'
@@ -21,187 +14,148 @@ pipeline {
     }
 
     stages {
-        stage("App/Tool pipeline job") {
+        stage('Checkout') {
             steps {
-                //sh 'printenv'
                 script {
-                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
+                    echo "Checking out the repository"
+                    checkout scm
                 }
             }
         }
-        stage('AI4OS Hub metadata validation') {
+        stage("V1 to V2 Metadata migration") {
             when {
-                expression {env.MODULES.contains(env.THIS_REPO)}
-            }
-            agent {                 
-                docker {
-                    image 'python:3.12'
-                }
-            }
-            steps {
-                dir("ai4os-hub-metadata") {
-                    // Checkout the repository, at tag v1.0.0
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: 'refs/tags/1.0.0']],
-                        userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
-                    ])  
-                }
-                withEnv([
-                    "HOME=${env.WORKSPACE}",
-                ]) {
-                    script {
-                        // Install script and dependencies
-                        sh "cd ai4os-hub-metadata && pip install ."
-                        // Now run the script
-                        sh ".local/bin/ai4-metadata-validator metadata.json"
-                    }
-                }
-            }
-        }
-    
-        stage("Variable initialization") {
-            when {
-                expression {env.MODULES.contains(env.THIS_REPO)}
-            }
-            environment {
-                AI4OS_REGISTRY_CREDENTIALS = credentials('AIOS-registry-credentials')
+                expression {! fileExists(".ai4-metadata.json")}
             }
             steps {
                 script {
-                    withFolderProperties{
-                        docker_registry = env.AI4OS_REGISTRY
-                        docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
-                        docker_repository = env.AI4OS_REGISTRY_REPOSITORY
-                    }
-                    docker_ids = []
+                    echo "Migrating metadata"
                     
-                    docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
+                    // Checkout the repository
+                    checkout scm
+                    
+                    sh "git checkout -b metadata-migration-${BUILD_NUMBER}"
 
-                    // Check here if variables exist
-                }
-            }
-        }
+                    metadata = readJSON file: "metadata.json"
 
-        stage('AI4OS Hub Docker images build') {
-            when {
-                anyOf {
-                    branch 'cicd'
-                    branch 'main'
-                    branch 'master'
-                    branch 'test'
-                    branch 'dev'
-                    branch 'release/*'
-                }
-                expression {env.MODULES.contains(env.THIS_REPO)}
-            }
-            steps {
-                checkout scm
+                    // Create new metadata, from V1 to V2
+                    new_meta = [
+                        "title": metadata["title"],
+                        "summary": metadata["summary"],
+                        // description is an array, convert it to string
+                        "description": metadata["description"].join(" "),
+                        "dates": [
+                            "created": metadata["date_creation"],
+                            // Updated should be now
+                            "updated": new Date().format("yyyy-MM-dd"),
 
-                script {
+                        ],
+                        "license": metadata["license"],
+                        "links": [
+                            "source_code": metadata["sources"]["code"],
+                            "docker_image": metadata["sources"]["docker_registry_repo"],
+                        ],
+                        "tags": [],
+                        "topics": [],
+                        "libraries": [],
+                    ]
 
-                    // define docker tag depending on the branch/release
-                    if ( env.BRANCH_NAME.startsWith("release/") ) {
-                        docker_tag = env.BRANCH_NAME.drop(8)
+                    // now move things into links
+                    if (metadata["sources"]["pre_trained_weights"]) {
+                        new_meta["links"]["weights"] = metadata["sources"]["pre_trained_weights"]
                     }
-                    else if ( env.BRANCH_NAME in ['master', 'main'] ) {
-                        docker_tag = "latest"
+                    if (metadata["sources"]["ai4_template"]) {
+                        new_meta["links"]["ai4_template"] = metadata["sources"]["ai4_template"]
                     }
-                    else {
-                        docker_tag = env.BRANCH_NAME
+                    if (metadata["dataset_url"]) {
+                        new_meta["links"]["dataset"] = metadata["dataset_url"]
                     }
-                    docker_tag = docker_tag.toLowerCase()
-
-                    // get docker image name from metadata.json
-                    meta = readJSON file: "metadata.json"
-                    image_name = meta["sources"]["docker_registry_repo"].split("/")[1]
-
-                    // use preconfigured in Jenkins docker_repository
-                    // XXX may confuse users? (e.g. expect xyz/myimage, but we push to ai4hub/myimage)
-                    image = docker_repository + "/" + image_name + ":" + docker_tag
-
-                    // build docker images
-                    // by default we expect Dockerfile name and location in the git repo root
-                    def dockerfile = "Dockerfile"
-                    def base_cpu_tag = ""
-                    def base_gpu_tag = ""
-                    def build_cpu_tag = false
-                    def build_gpu_tag = false
-                    // try to load constants if defined in user's repository ($jenkinsconstants_file has to be in the repo root)
-                    jenkinsconstants_file = "JenkinsConstants.groovy"
-                    try {
-                        def constants = load jenkinsconstants_file
-                        // $jenkinsconstants_file may have all constants or only "dockefile" or only both base_cpu|gpu_tag:
-                        try {
-                            dockerfile = constants.dockerfile
-                        } catch (e) {}
-                        // let's define that if used, both "base_cpu_tag" && "base_gpu_tag" are required:
-                        try {
-                            base_cpu_tag = constants.base_cpu_tag
-                        } catch (e) {}
-                        try {
-                            base_gpu_tag = constants.base_gpu_tag
-                        } catch (e) {}
-                        if (!base_cpu_tag && !base_gpu_tag) {
-                            throw new Exception("Neither \"base_cpu_tag\" nor \"base_gpu_tag\" is defined. Using default tag from ${dockerfile}")
-                        }
-                        if (!base_cpu_tag || !base_gpu_tag) {
-                            throw new Exception("Check ${jenkinsconstants_file}: If separate tags for CPU and GPU are needed, both \"base_cpu_tag\" and \"base_gpu_tag\" are required!")
-                        }
-                        // if no Exception so far, allow building "-cpu" and "-gpu" versions
-                        build_cpu_tag = true
-                        build_gpu_tag = true
-                    } catch (err) {
-                        // if $jenkinsconstants_file not found or one of base_cpu|gpu_tag is not defined or none of them, build docker image with default params
-                        println("[WARNING] Exception: ${err}")
-                        println("[INFO] Using default parameters for Docker image building")
-                        image_id = docker.build(image, "--no-cache --force-rm -f ${dockerfile} .")
+                    if (metadata["training_files_url"]) {
+                        new_meta["links"]["training_data"] = metadata["sources"]["training_files_url"]
                     }
-                    // build "-cpu" image, if configured
-                    if (build_cpu_tag) {
-                        image_id = docker.build(image, "--no-cache --force-rm --build-arg tag=${base_cpu_tag} -f ${dockerfile} .")
-                        // define additional docker_tag_cpu to mark it as "cpu" version
-                        docker_tag_cpu = (docker_tag == "latest") ? "cpu" : (docker_tag + "-cpu")
-                        image_cpu = docker_repository + "/" + image_name + ":" + docker_tag_cpu
-                        sh "docker tag ${image} ${image_cpu}"
-                        docker_ids.add(image_cpu)
+                    if (metadata["cite_url"]) {
+                        new_meta["links"]["citation"] = metadata["cite_url"]    
                     }
+                    // FIXME(?) - this is now slit in three different keywords
+                    new_meta["keywords"] = metadata["keywords"]
+                    
+                    if (metadata["keywords"].contains("tensorflow") || metadata["keywords"].contains("TensorFlow") || metadata["keywords"].contains("Tensor Flow")) {
+                        new_meta["libraries"].add("TensorFlow")
+                    }
+                    if (metadata["keywords"].contains("keras") || metadata["keywords"].contains("Keras")) {
+                        new_meta["libraries"].add("Keras")
+                    }
+                    if (metadata["keywords"].contains("pytorch") || metadata["keywords"].contains("PyTorch")) {
+                        new_meta["libraries"].add("Pytorch")
+                    }
+                    if (metadata["keywords"].contains("scikit-learn") || metadata["keywords"].contains("scikit learn")) {
+                        new_meta["libraries"].add("Scikit-Learn")
+                    }
+                    // if trainable add the AI4 trainable topic
+                    if (metadata["trainable"]) {
+                        new_meta["topics"].add("AI4 Trainable")
+                    }
+                    // if inference add the AI4 inference topic
+                    if (metadata["inference"]) {
+                        new_meta["topics"].add("AI4 Inference")
+                        new_meta["topics"].add("AI4 pre trained")
+                    }
+    
+                    // Create a new metadata file
+                    writeJSON file: ".ai4-metadata.json", json: new_meta, pretty: 4
 
-                    // check that in the built image (cpu or default), DEEPaaS API starts as expected
-                    // EXCLUDE "cicd" branch
-                    // do it with only "cpu|default" image: 
-                    // a) can stop before proceeding with "gpu" version b) "gpu" may fail without GPU hardware anyway
-                    if (env.BRANCH_NAME != 'cicd') {
-                        sh "git clone https://github.com/ai4os/ai4os-hub-check-artifact"
-                        sh "bash ai4os-hub-check-artifact/check-artifact ${image}"
-                        sh "rm -rf ai4os-hub-check-artifact"
+                    meta_json = readJSON file: ".ai4-metadata.json"
+
+                    println("New metadata: ${new_meta}")
+
+
+
+                    // Setup git user
+                    sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
+                    sh "git config --global user.name 'AI4EOSC Jenkins user'"
+            
+                    // Now commit the changes
+                    sh "git add .ai4-metadata.json"
+                    sh "git commit -m 'feat: Migrate metadata from v1 to v2'"
+
+                    // Push the changes to the repository
+                    withCredentials([
+                        gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
+                            sh "git push origin metadata-migration-${BUILD_NUMBER}:metadata -f"
                     }
 
-                    docker_ids.add(image)
+                    return
 
-                    // finally, build "-gpu" image, if configured
-                    if (build_gpu_tag) {
-                        // define additional docker_tag_gpu to mark "gpu" version
-                        docker_tag_gpu = (docker_tag == "latest") ? "gpu" : (docker_tag + "-gpu")
-                        image = docker_repository + "/" + image_name + ":" + docker_tag_gpu
-                        image_id = docker.build(image, "--no-cache --force-rm --build-arg tag=${base_gpu_tag}  -f ${dockerfile} .")
-                        docker_ids.add(image)
-                    }
+                    // Get repository ID from GitHub API
+                    github_api_url = env.THIS_REPO.replace("github.com", "api.github.com/repos")
+                    
+                    // Get default branch for repo
+                    response = httpRequest authentication: 'github-ai4os-hub',
+                               httpMode: 'GET',
+                               url: "${github_api_url}"
+                    response = readJSON text: response.content
+                    default_branch = response["default_branch"]
 
-                }
-            }
-        }
-        stage('AI4OS Hub Docker delivery to registry') {
-            when {
-                expression {env.MODULES.contains(env.THIS_REPO)}
-            }
-            steps {
-                script {
-                    docker.withRegistry(docker_registry, docker_registry_credentials) {
-                        docker_ids.each {
-                            docker.image(it).push()
-                        }
-                    }
+                    // Now, crete a PR using GitHub API
+                    pr_body = "This is an automated change.\\n\\nThis pull request migrates the module metadata from V1 to V2, please carefully review the changes and, if they are correct, merge the PR."
+                    pr_title = "Migrate metadata from V1 to V2"
+                    pr_head = "metadata"
+                    pr = """{
+                        "title": "${pr_title}",
+                        "head": "${pr_head}",
+                        "base": "${default_branch}",
+                        "body": "${pr_body}"
+                    }"""
+
+                    // create a PR
+                    response = httpRequest authentication: 'github-ai4os-hub',
+                               httpMode: 'POST',
+                               url: "${github_api_url}/pulls",
+                               contentType: 'APPLICATION_JSON',
+                               requestBody: pr
+
+                    println("PR created: ${response.content}")
+
+
                 }
             }
         }
