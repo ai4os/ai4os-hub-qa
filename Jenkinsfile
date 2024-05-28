@@ -237,6 +237,7 @@ pipeline {
         stage('AI4OS Hub Docker delivery to registry') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {docker_ids.size() > 0}
             }
             steps {
                 script {
