@@ -68,6 +68,8 @@ pipeline {
         stage('AI4OS Hub metadata V2 validation') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
+                // Check if metadata.json is present in the repository
+                expression {fileExists(".ai4-metadata.json")}
             }
             agent {                 
                 docker {
