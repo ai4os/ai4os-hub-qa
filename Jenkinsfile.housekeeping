@@ -1,0 +1,39 @@
+// vim: filetype=groovy
+
+pipeline {
+    agent {
+        label 'docker'
+    }
+
+    environment {
+        // Remove .git from the GIT_URL link
+        THIS_REPO = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
+        // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
+        MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
+        MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    echo "Checking out the repository"
+                    checkout scm
+                }
+            }
+        }
+        stage('Cleanup') {
+            steps { 
+                script {
+                    echo "Cleaning workspace"
+                }
+            }
+            post {
+                always {
+                    cleanWs()
+                }
+            }
+        }
+    }
+}
+
