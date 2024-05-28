@@ -33,7 +33,7 @@ pipeline {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
-            agent {                 
+            agent {
                 docker {
                     image 'python:3.12'
                 }
@@ -51,7 +51,7 @@ pipeline {
                         $class: 'GitSCM',
                         branches: [[name: 'refs/tags/1.0.0']],
                         userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
-                    ])  
+                    ])
                 }
                 withEnv([
                     "HOME=${env.WORKSPACE}",
@@ -61,6 +61,42 @@ pipeline {
                         sh "cd ai4os-hub-metadata && pip install ."
                         // Now run the script
                         sh ".local/bin/ai4-metadata-validator metadata.json"
+                    }
+                }
+            }
+        }
+        stage('AI4OS Hub V2 metadata validation') {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+            }
+            agent {                 
+                docker {
+                    image 'python:3.12'
+                }
+            }
+            steps {
+                script {
+                    // Check if .metadata.json is present in the repository
+                    if (!fileExists(".ai4-metadata.json")) {
+                        error(".ai4-metadata.json file not found in the repository")
+                    }
+                }
+                dir("ai4os-hub-metadata") {
+                    // Checkout the repository, at tag v1.0.0
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: 'refs/tags/2.0.0']],
+                        userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
+                    ])  
+                }
+                withEnv([
+                    "HOME=${env.WORKSPACE}",
+                ]) {
+                    script {
+                        // Install script and dependencies
+                        sh "cd ai4os-hub-metadata && pip install ."
+                        // Now run the script
+                        sh ".local/bin/ai4-metadata-validator .ai4-metadata.json"
                     }
                 }
             }
