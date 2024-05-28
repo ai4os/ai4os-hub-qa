@@ -21,14 +21,14 @@ pipeline {
     }
 
     stages {
-        stage("App/Tool pipeline job") {
-            steps {
-                //sh 'printenv'
-                script {
-                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
-                }
-            }
-        }
+        //stage("App/Tool pipeline job") {
+        //    steps {
+        //        //sh 'printenv'
+        //        script {
+        //            build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
+        //        }
+        //    }
+        //}
         stage('AI4OS Hub V1 metadata validation') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
