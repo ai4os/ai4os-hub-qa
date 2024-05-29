@@ -87,7 +87,8 @@ pipeline {
                     // Checkout the repository, at tag v1.0.0
                     checkout([
                         $class: 'GitSCM',
-                        branches: [[name: 'refs/tags/2.0.0']],
+                        // branches: [[name: 'refs/tags/2.0.0']],
+                        branches: [[name: 'devel/ai4os']],
                         userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
                     ])  
                 }
