@@ -104,7 +104,16 @@ pipeline {
                 }
             }
         }
-    
+        stage("License validation") {
+            steps {
+                script {
+                    // Check if LICENSE file is present in the repository
+                    if (!fileExists("LICENSE")) {
+                        error("LICENSE file not found in the repository")
+                    }
+                }
+            }
+        }
         stage("Docker Variable initialization") {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
