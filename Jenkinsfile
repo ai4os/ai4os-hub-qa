@@ -21,31 +21,37 @@ pipeline {
     }
 
     stages {
-        stage("App/Tool pipeline job") {
-            steps {
-                //sh 'printenv'
-                script {
-                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
-                }
-            }
-        }
-        stage('AI4OS Hub metadata validation') {
+        //stage("App/Tool pipeline job") {
+        //    steps {
+        //        //sh 'printenv'
+        //        script {
+        //            build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
+        //        }
+        //    }
+        //}
+        stage('AI4OS Hub metadata V1 validation') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
-            agent {                 
+            agent {
                 docker {
                     image 'python:3.12'
                 }
             }
             steps {
+                script {
+                    // Check if .metadata.json is present in the repository
+                    if (!fileExists("metadata.json")) {
+                        error("metadata.json file not found in the repository")
+                    }
+                }
                 dir("ai4os-hub-metadata") {
                     // Checkout the repository, at tag v1.0.0
                     checkout([
                         $class: 'GitSCM',
                         branches: [[name: 'refs/tags/1.0.0']],
                         userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
-                    ])  
+                    ])
                 }
                 withEnv([
                     "HOME=${env.WORKSPACE}",
@@ -59,8 +65,56 @@ pipeline {
                 }
             }
         }
-    
-        stage("Variable initialization") {
+        stage('AI4OS Hub metadata V2 validation') {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+                // Check if metadata.json is present in the repository
+                expression {fileExists(".ai4-metadata.json")}
+            }
+            agent {                 
+                docker {
+                    image 'python:3.12'
+                }
+            }
+            steps {
+                script {
+                    // Check if .metadata.json is present in the repository
+                    if (!fileExists(".ai4-metadata.json")) {
+                        error(".ai4-metadata.json file not found in the repository")
+                    }
+                }
+                dir("ai4os-hub-metadata") {
+                    // Checkout the repository, at tag v1.0.0
+                    checkout([
+                        $class: 'GitSCM',
+                        // branches: [[name: 'refs/tags/2.0.0']],
+                        branches: [[name: 'devel/ai4os']],
+                        userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
+                    ])  
+                }
+                withEnv([
+                    "HOME=${env.WORKSPACE}",
+                ]) {
+                    script {
+                        // Install script and dependencies
+                        sh "cd ai4os-hub-metadata && pip install ."
+                        // Now run the script
+                        sh ".local/bin/ai4-metadata-validator .ai4-metadata.json"
+                    }
+                }
+            }
+        }
+        stage("License validation") {
+            steps {
+                script {
+                    // Check if LICENSE file is present in the repository
+                    if (!fileExists("LICENSE")) {
+                        error("LICENSE file not found in the repository")
+                    }
+                }
+            }
+        }
+        stage("Docker Variable initialization") {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
@@ -194,6 +248,7 @@ pipeline {
         stage('AI4OS Hub Docker delivery to registry') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {docker_ids.size() > 0}
             }
             steps {
                 script {
