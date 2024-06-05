@@ -47,9 +47,7 @@ pipeline {
                             "created": metadata["date_creation"],
                             // Updated should be now
                             "updated": new Date().format("yyyy-MM-dd"),
-
                         ],
-                        "license": metadata["license"],
                         "links": [
                             "source_code": metadata["sources"]["code"],
                             "docker_image": metadata["sources"]["docker_registry_repo"],
@@ -60,6 +58,12 @@ pipeline {
                     ]
 
                     // now move things into links
+                    if (metadata["doi"]) {
+                        new_meta["doi"] = metadata["doi"]
+                    }
+                    if (metadata["zenodo_doi"]) {
+                        new_meta["links"]["zenodo_doi"] = metadata["zenodo_doi"]
+                    }   
                     if (metadata["sources"]["pre_trained_weights"]) {
                         new_meta["links"]["weights"] = metadata["sources"]["pre_trained_weights"]
                     }
@@ -75,8 +79,8 @@ pipeline {
                     if (metadata["cite_url"]) {
                         new_meta["links"]["citation"] = metadata["cite_url"]    
                     }
-                    // FIXME(?) - this is now slit in three different keywords
-                    new_meta["keywords"] = metadata["keywords"]
+                    // Add all keywords as tags, we can adjust manually at a glance
+                    new_meta["tags"] = metadata["keywords"]
                     
                     if (metadata["keywords"].contains("tensorflow") || metadata["keywords"].contains("TensorFlow") || metadata["keywords"].contains("Tensor Flow")) {
                         new_meta["libraries"].add("TensorFlow")
@@ -92,12 +96,12 @@ pipeline {
                     }
                     // if trainable add the AI4 trainable topic
                     if (metadata["trainable"]) {
-                        new_meta["topics"].add("AI4 Trainable")
+                        new_meta["categories"].add("AI4 trainable")
                     }
                     // if inference add the AI4 inference topic
                     if (metadata["inference"]) {
-                        new_meta["topics"].add("AI4 Inference")
-                        new_meta["topics"].add("AI4 pre trained")
+                        new_meta["categories"].add("AI4 inference")
+                        new_meta["categories"].add("AI4 pre trained")
                     }
     
                     // Create a new metadata file
@@ -106,8 +110,6 @@ pipeline {
                     meta_json = readJSON file: ".ai4-metadata.json"
 
                     println("New metadata: ${new_meta}")
-
-
 
                     // Setup git user
                     sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
@@ -122,8 +124,6 @@ pipeline {
                         gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
                             sh "git push origin metadata-migration-${BUILD_NUMBER}:metadata -f"
                     }
-
-                    return
 
                     // Get repository ID from GitHub API
                     github_api_url = env.THIS_REPO.replace("github.com", "api.github.com/repos")
