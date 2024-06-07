@@ -53,7 +53,8 @@ pipeline {
                             "docker_image": metadata["sources"]["docker_registry_repo"],
                         ],
                         "tags": [],
-                        "topics": [],
+                        "tasks": [],
+                        "categories": [],
                         "libraries": [],
                     ]
 
