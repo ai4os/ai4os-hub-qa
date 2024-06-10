@@ -115,7 +115,7 @@ pipeline {
                     sh "git config --global user.name 'AI4EOSC Jenkins user'"
 
                     // Now commit the changes
-                    sh "git add .ai4-metadata.json"
+                    sh "git add ai4-metadata.yml"
                     sh "git commit -m 'feat: Migrate metadata from v1 to v2'"
 
                     // Push the changes to the repository
