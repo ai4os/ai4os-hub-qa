@@ -29,10 +29,10 @@ pipeline {
             steps {
                 script {
                     echo "Migrating metadata"
-                    
+
                     // Checkout the repository
                     checkout scm
-                    
+
                     sh "git checkout -b metadata-migration-${BUILD_NUMBER}"
 
                     metadata = readJSON file: "metadata.json"
@@ -64,7 +64,7 @@ pipeline {
                     }
                     if (metadata["zenodo_doi"]) {
                         new_meta["links"]["zenodo_doi"] = metadata["zenodo_doi"]
-                    }   
+                    }
                     if (metadata["sources"]["pre_trained_weights"]) {
                         new_meta["links"]["weights"] = metadata["sources"]["pre_trained_weights"]
                     }
@@ -78,11 +78,11 @@ pipeline {
                         new_meta["links"]["training_data"] = metadata["sources"]["training_files_url"]
                     }
                     if (metadata["cite_url"]) {
-                        new_meta["links"]["citation"] = metadata["cite_url"]    
+                        new_meta["links"]["citation"] = metadata["cite_url"]
                     }
                     // Add all keywords as tags, we can adjust manually at a glance
                     new_meta["tags"] = metadata["keywords"]
-                    
+
                     if (metadata["keywords"].contains("tensorflow") || metadata["keywords"].contains("TensorFlow") || metadata["keywords"].contains("Tensor Flow")) {
                         new_meta["libraries"].add("TensorFlow")
                     }
@@ -104,18 +104,16 @@ pipeline {
                         new_meta["categories"].add("AI4 inference")
                         new_meta["categories"].add("AI4 pre trained")
                     }
-    
-                    // Create a new metadata file
-                    writeJSON file: ".ai4-metadata.json", json: new_meta, pretty: 4
 
-                    meta_json = readJSON file: ".ai4-metadata.json"
+                    // Create a new metadata file (YAML)
+                    writeYaml file: "ai4-metadata.yml", data: new_meta, pretty: 4
 
                     println("New metadata: ${new_meta}")
 
                     // Setup git user
                     sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
                     sh "git config --global user.name 'AI4EOSC Jenkins user'"
-            
+
                     // Now commit the changes
                     sh "git add .ai4-metadata.json"
                     sh "git commit -m 'feat: Migrate metadata from v1 to v2'"
@@ -128,7 +126,7 @@ pipeline {
 
                     // Get repository ID from GitHub API
                     github_api_url = env.THIS_REPO.replace("github.com", "api.github.com/repos")
-                    
+
                     // Get default branch for repo
                     response = httpRequest authentication: 'github-ai4os-hub',
                                httpMode: 'GET',
@@ -161,7 +159,7 @@ pipeline {
             }
         }
         stage('Cleanup') {
-            steps { 
+            steps {
                 script {
                     echo "Cleaning workspace"
                 }
@@ -174,4 +172,3 @@ pipeline {
         }
     }
 }
-
