@@ -106,7 +106,7 @@ pipeline {
                     }
 
                     // Create a new metadata file (YAML)
-                    writeYaml file: "ai4-metadata.yml", data: new_meta, pretty: 4
+                    writeYaml file: "ai4-metadata.yml", data: new_meta, pretty: 2
 
                     println("New metadata: ${new_meta}")
 
