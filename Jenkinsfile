@@ -204,51 +204,52 @@ pipeline {
                 }
             }
         }
-        stage('Update OSCAR services') {
-            when {
-                expression {env.MODULES.contains(env.THIS_REPO)}
-            }
-            environment {
-                MYTOKEN = credentials('mytoken-token')
-            }
+        // Skip this stage for now
+        // stage('Update OSCAR services') {
+        //     when {
+        //         expression {env.MODULES.contains(env.THIS_REPO)}
+        //     }
+        //     environment {
+        //         MYTOKEN = credentials('mytoken-token')
+        //     }
 
-            steps {
-                script {
-                    withFolderProperties {
-                        oscar_cluster = env.OSCAR_CLUSTER
-                        oscar_endpoint = env.OSCAR_ENDPOINT
-                    }
+        //     steps {
+        //         script {
+        //             withFolderProperties {
+        //                 oscar_cluster = env.OSCAR_CLUSTER
+        //                 oscar_endpoint = env.OSCAR_ENDPOINT
+        //             }
 
-                    // Download OSCAR CLI from https
-                    sh "curl -L -o oscar-cli https://github.com/grycap/oscar-cli/releases/download/v1.7.1/oscar-cli"
-                    sh "chmod +x oscar-cli"
+        //             // Download OSCAR CLI from https
+        //             sh "curl -L -o oscar-cli https://github.com/grycap/oscar-cli/releases/download/v1.7.1/oscar-cli"
+        //             sh "chmod +x oscar-cli"
 
-                    access_token = sh (returnStdout: true, script: "mytoken AT --MT-env MYTOKEN").trim()
+        //             access_token = sh (returnStdout: true, script: "mytoken AT --MT-env MYTOKEN").trim()
 
-                    metadata = readJSON file: "metadata.json"
+        //             metadata = readJSON file: "metadata.json"
 
-                    // Create metadata file
-                    oscar_meta = [
-                        "token": access_token,
-                        "metadata": metadata
-                    ]
+        //             // Create metadata file
+        //             oscar_meta = [
+        //                 "token": access_token,
+        //                 "metadata": metadata
+        //             ]
 
-                    // FIXME(aloga): this should be present in the metadata file, and therefore we should not hardcode it here
-                    oscar_meta["metadata"]["resources"] = [
-                        "cpu": "0.5",
-                        "memory": "500MB"
-                    ]
+        //             // FIXME(aloga): this should be present in the metadata file, and therefore we should not hardcode it here
+        //             oscar_meta["metadata"]["resources"] = [
+        //                 "cpu": "0.5",
+        //                 "memory": "500MB"
+        //             ]
 
-                    writeFile file: "oscar-metadata.json", text: oscar_meta as String
+        //             writeFile file: "oscar-metadata.json", text: oscar_meta as String
 
-                    // Add OSCAR Cluster
-                    sh "./oscar-cli cluster add ${oscar_cluster} ${oscar_endpoint}"
+        //             // Add OSCAR Cluster
+        //             sh "./oscar-cli cluster add ${oscar_cluster} ${oscar_endpoint}"
 
-                    // Update OSCAR services
-                    sh "./oscar-cli service run update-modules-service --input oscar-metadata.json"
-                }
-            }
-        }
+        //             // Update OSCAR services
+        //             sh "./oscar-cli service run update-modules-service --input oscar-metadata.json"
+        //         }
+        //     }
+        // }
         stage('Cleanup') {
             steps { 
                 script {
