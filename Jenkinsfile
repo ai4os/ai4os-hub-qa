@@ -214,6 +214,11 @@ pipeline {
 
             steps {
                 script {
+                    withFolderProperties {
+                        oscar_cluster = env.OSCAR_CLUSTER
+                        oscar_endpoint = env.OSCAR_ENDPOINT
+                    }
+
                     // Download OSCAR CLI from https
                     sh "curl -L -o oscar-cli https://github.com/grycap/oscar-cli/releases/download/v1.7.1/oscar-cli"
                     sh "chmod +x oscar-cli"
@@ -235,6 +240,9 @@ pipeline {
                     ]
 
                     writeFile file: "oscar-metadata.json", text: oscar_meta as String
+
+                    // Add OSCAR Cluster
+                    sh "./oscar-cli cluster add ${oscar_cluster} ${oscar_endpoint}"
 
                     // Update OSCAR services
                     sh "./oscar-cli service run update-modules-service --input oscar-metadata.json"
