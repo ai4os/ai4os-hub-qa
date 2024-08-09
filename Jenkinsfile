@@ -71,7 +71,6 @@ pipeline {
                 script {
                     withFolderProperties{
                         docker_registry = env.AI4OS_REGISTRY
-                        docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
                         docker_repository = env.AI4OS_REGISTRY_REPOSITORY
                     }
                     docker_ids = []
