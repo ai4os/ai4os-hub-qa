@@ -39,6 +39,7 @@ pipeline {
 
                     // Create new metadata, from V1 to V2
                     new_meta = [
+                        "metadata_version": "2.0.0",
                         "title": metadata["title"],
                         "summary": metadata["summary"],
                         // description is an array, convert it to string
@@ -158,17 +159,16 @@ pipeline {
                 }
             }
         }
-        stage('Cleanup') {
-            steps {
-                script {
-                    echo "Cleaning workspace"
-                }
-            }
-            post {
-                always {
-                    cleanWs()
-                }
-            }
+    }
+    post {
+        // Clean after build
+        always {
+            cleanWs(cleanWhenNotBuilt: false,
+                    deleteDirs: true,
+                    disableDeferredWipeout: true,
+                    notFailBuild: true,
+                    patterns: [[pattern: '.gitignore', type: 'INCLUDE'],
+                               [pattern: '.propsfile', type: 'EXCLUDE']])
         }
     }
 }
