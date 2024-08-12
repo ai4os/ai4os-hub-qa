@@ -24,7 +24,8 @@ pipeline {
         }
         stage("V1 to V2 Metadata migration") {
             when {
-                expression {! fileExists(".ai4-metadata.json")}
+                expression {! fileExists("ai4-metadata.json")}
+                expression {! fileExists("ai4-metadata.yml")}
             }
             steps {
                 script {
