@@ -30,7 +30,7 @@ pipeline {
             }
         }
         stage('Metadata tests') {
-            parallell {
+            parallel {
                 stage('AI4OS Hub metadata V1 validation') {
                     when {
                         expression {env.MODULES.contains(env.THIS_REPO)}
