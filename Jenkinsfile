@@ -56,11 +56,11 @@ pipeline {
                 }
             }
         }
-        stage('AI4OS Hub metadata V2 validation') {
+        stage('AI4OS Hub metadata V2 validation (JSON)') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
                 // Check if metadata.json is present in the repository
-                expression {fileExists(".ai4-metadata.json")}
+                expression {fileExists("ai4-metadata.json")}
             }
             agent {                 
                 docker {
@@ -69,9 +69,12 @@ pipeline {
             }
             steps {
                 script {
-                    // Check if .metadata.json is present in the repository
-                    if (!fileExists(".ai4-metadata.json")) {
-                        error(".ai4-metadata.json file not found in the repository")
+                    // Check if metadata files are present in the repository
+                    if (!fileExists("ai4-metadata.json")) {
+                        error("ai4-metadata.json file not found in the repository")
+                    }
+                    if (fileExists("ai4-metadata.yml")) {
+                        error("Both ai4-metadata.json and ai4-metadata.yml files found in the repository")
                     }
                 }
                 withEnv([
@@ -79,7 +82,40 @@ pipeline {
                 ]) {
                     script {
                         sh "pip install ai4-metadata"
-                        sh "ai4-metadata-validator --metadata-version 2.0.0 .ai4-metadata.json"
+                        sh "ai4-metadata-validator --metadata-version 2.0.0 ai4-metadata.json"
+                    }
+                }
+            }
+        }
+        stage('AI4OS Hub metadata V2 validation (YAML)') {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+                // Check if metadata.json is present in the repository
+                expression {fileExists("ai4-metadata.yml")}
+            }
+            agent {                 
+                docker {
+                    image 'python:3.12'
+                }
+            }
+            steps {
+                script {
+                    if (!fileExists("ai4-metadata.yml")) {
+                        error("ai4-metadata.yml file not found in the repository")
+                    }
+                    if (fileExists("ai4-metadata.json")) {
+                        error("Both ai4-metadata.json and ai4-metadata.yml files found in the repository")
+                    }
+                    // load YAML file, dump as JSON
+                    metadata = readYaml file: "ai4-metadata.yml"
+                    writeJSON file: "ai4-metadata.json", json: metadata
+                }
+                withEnv([
+                    "HOME=${env.WORKSPACE}",
+                ]) {
+                    script {
+                        sh "pip install ai4-metadata"
+                        sh "ai4-metadata-validator --metadata-version 2.0.0 ai4-metadata.json"
                     }
                 }
             }
