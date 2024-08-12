@@ -51,7 +51,7 @@ pipeline {
                 ]) {
                     script {
                         sh "pip install ai4-metadata"
-                        sh "ai4-metadata-validator --metadata-version 1.0.0 metadata.json"
+                        sh ".local/bin/ai4-metadata-validator --metadata-version 1.0.0 metadata.json"
                     }
                 }
             }
