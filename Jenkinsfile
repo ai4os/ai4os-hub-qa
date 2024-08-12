@@ -122,7 +122,7 @@ pipeline {
                     // Push the changes to the repository
                     withCredentials([
                         gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
-                            sh "git push origin metadata-migration-${BUILD_NUMBER}:metadata -f"
+                            sh "git push origin metadata-migration-${BUILD_NUMBER}:metadata-migration-${BUILD_NUMBER} -f"
                     }
 
                     // Get repository ID from GitHub API
@@ -154,7 +154,6 @@ pipeline {
                                requestBody: pr
 
                     println("PR created: ${response.content}")
-
 
                 }
             }
