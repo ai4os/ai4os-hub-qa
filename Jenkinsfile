@@ -45,22 +45,13 @@ pipeline {
                         error("metadata.json file not found in the repository")
                     }
                 }
-                dir("ai4os-hub-metadata") {
-                    // Checkout the repository, at tag v1.0.0
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: 'refs/tags/1.0.0']],
-                        userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
-                    ])
-                }
+
                 withEnv([
                     "HOME=${env.WORKSPACE}",
                 ]) {
                     script {
-                        // Install script and dependencies
-                        sh "cd ai4os-hub-metadata && pip install ."
-                        // Now run the script
-                        sh ".local/bin/ai4-metadata-validator metadata.json"
+                        sh "pip install ai4-metadata"
+                        sh "ai4-metadata-validator --metadata-version 1.0.0 metadata.json"
                     }
                 }
             }
@@ -83,23 +74,12 @@ pipeline {
                         error(".ai4-metadata.json file not found in the repository")
                     }
                 }
-                dir("ai4os-hub-metadata") {
-                    // Checkout the repository, at tag v1.0.0
-                    checkout([
-                        $class: 'GitSCM',
-                        // branches: [[name: 'refs/tags/2.0.0']],
-                        branches: [[name: 'devel/ai4os']],
-                        userRemoteConfigs: [[url:  'https://github.com/ai4os/ai4-metadata-validator.git']]
-                    ])  
-                }
                 withEnv([
                     "HOME=${env.WORKSPACE}",
                 ]) {
                     script {
-                        // Install script and dependencies
-                        sh "cd ai4os-hub-metadata && pip install ."
-                        // Now run the script
-                        sh ".local/bin/ai4-metadata-validator .ai4-metadata.json"
+                        sh "pip install ai4-metadata"
+                        sh "ai4-metadata-validator --metadata-version 2.0.0 .ai4-metadata.json"
                     }
                 }
             }
