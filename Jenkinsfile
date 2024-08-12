@@ -122,7 +122,7 @@ pipeline {
                     // Push the changes to the repository
                     withCredentials([
                         gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
-                            sh "git push origin metadata-migration-${BUILD_NUMBER}:metadata-migration-${BUILD_NUMBER} -f"
+                            sh "git push origin metadata-migration-${BUILD_NUMBER} -f"
                     }
 
                     // Get repository ID from GitHub API
@@ -138,7 +138,7 @@ pipeline {
                     // Now, crete a PR using GitHub API
                     pr_body = "This is an automated change.\\n\\nThis pull request migrates the module metadata from V1 to V2, please carefully review the changes and, if they are correct, merge the PR."
                     pr_title = "Migrate metadata from V1 to V2"
-                    pr_head = "metadata"
+                    pr_head = "metadata-migration-${BUILD_NUMBER}"
                     pr = """{
                         "title": "${pr_title}",
                         "head": "${pr_head}",
