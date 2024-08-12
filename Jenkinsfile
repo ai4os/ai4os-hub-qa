@@ -21,14 +21,6 @@ pipeline {
     }
 
     stages {
-        stage("App/Tool pipeline job") {
-            steps {
-                //sh 'printenv'
-                script {
-                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
-                }
-            }
-        }
         stage('Metadata tests') {
             parallel {
                 stage('AI4OS Hub metadata V1 validation') {
@@ -131,6 +123,14 @@ pipeline {
                             }
                         }
                     }
+                }
+            }
+        }
+        stage("User-defined module pipeline job") {
+            steps {
+                //sh 'printenv'
+                script {
+                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
                 }
             }
         }
