@@ -110,14 +110,14 @@ pipeline {
                             }
                             // load YAML file, dump as JSON
                             metadata = readYaml file: "ai4-metadata.yml"
-                            writeJSON file: "ai4-metadata.json", json: metadata
+                                writeJSON file: "ai4-metadata-${BUILD_NUMBER}.json", json: metadata
                         }
                         withEnv([
                             "HOME=${env.WORKSPACE}",
                         ]) {
                             script {
                                 sh "pip install ai4-metadata"
-                                sh ".local/bin/ai4-metadata-validator --metadata-version 2.0.0 ai4-metadata.json"
+                                sh ".local/bin/ai4-metadata-validator --metadata-version 2.0.0 ai4-metadata-${BUILD_NUMBER}.json"
                             }
                         }
                     }
