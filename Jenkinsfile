@@ -21,8 +21,10 @@ pipeline {
     }
 
     stages {
+
         stage('Metadata tests') {
             parallel {
+
                 stage('AI4OS Hub metadata V1 validation') {
                     when {
                         expression {env.MODULES.contains(env.THIS_REPO)}
@@ -50,6 +52,7 @@ pipeline {
                         }
                     }
                 }
+
                 stage('AI4OS Hub metadata V2 validation (JSON)') {
                     when {
                         expression {env.MODULES.contains(env.THIS_REPO)}
@@ -81,6 +84,7 @@ pipeline {
                         }
                     }
                 }
+
                 stage('AI4OS Hub metadata V2 validation (YAML)') {
                     when {
                         expression {env.MODULES.contains(env.THIS_REPO)}
@@ -114,6 +118,7 @@ pipeline {
                         }
                     }
                 }
+
                 stage("License validation") {
                     steps {
                         script {
@@ -126,6 +131,7 @@ pipeline {
                 }
             }
         }
+
         stage("User-defined module pipeline job") {
             steps {
                 //sh 'printenv'
@@ -134,6 +140,7 @@ pipeline {
                 }
             }
         }
+
         stage("Docker Variable initialization") {
              when {
                  expression {env.MODULES.contains(env.THIS_REPO)}
@@ -265,6 +272,7 @@ pipeline {
                  }
              }
          }
+
          stage('AI4OS Hub Docker delivery to registry') {
              when {
                  expression {env.MODULES.contains(env.THIS_REPO)}
@@ -278,7 +286,8 @@ pipeline {
                      }
                  }
              }
-         }
+        }
+
         stage('Enable Zenodo Github integration') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
@@ -384,6 +393,7 @@ pipeline {
                 }
             }
         }
+
         stage('Get Zenodo DOI') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
@@ -412,6 +422,7 @@ pipeline {
                 }
             }
         }
+
         stage('Update metadata files') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
@@ -529,6 +540,7 @@ pipeline {
             }
         }
     }
+
     post {
         // Clean after build
         always {
@@ -540,5 +552,6 @@ pipeline {
                                [pattern: '.propsfile', type: 'EXCLUDE']])
         }
     }
+
 }
 
