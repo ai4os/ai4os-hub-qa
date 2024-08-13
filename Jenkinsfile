@@ -56,7 +56,7 @@ pipeline {
                         // Check if metadata.json is present in the repository
                         expression {fileExists("ai4-metadata.json")}
                     }
-                    agent {                 
+                    agent {
                         docker {
                             image 'python:3.12'
                         }
@@ -87,7 +87,7 @@ pipeline {
                         // Check if metadata.json is present in the repository
                         expression {fileExists("ai4-metadata.yml")}
                     }
-                    agent {                 
+                    agent {
                         docker {
                             image 'python:3.12'
                         }
@@ -149,7 +149,7 @@ pipeline {
                          docker_repository = env.AI4OS_REGISTRY_REPOSITORY
                      }
                      docker_ids = []
-                    
+
                      docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
 
                      // Check here if variables exist
@@ -243,7 +243,7 @@ pipeline {
 
                      // check that in the built image (cpu or default), DEEPaaS API starts as expected
                      // EXCLUDE "cicd" branch
-                     // do it with only "cpu|default" image: 
+                     // do it with only "cpu|default" image:
                      // a) can stop before proceeding with "gpu" version b) "gpu" may fail without GPU hardware anyway
                      if (env.BRANCH_NAME != 'cicd') {
                          sh "git clone https://github.com/ai4os/ai4os-hub-check-artifact"
@@ -284,7 +284,7 @@ pipeline {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
             environment {
-                ZENODO_TOKEN = credentials('zenodo')  
+                ZENODO_TOKEN = credentials('zenodo')
             }
             steps {
                 checkout scm
@@ -312,13 +312,13 @@ pipeline {
                             return
                         }
                     }
-                    
+
                     need_zenodo_retrigger = true
                     // Otherwise, enable Zenodo integration
                     httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
                                 httpMode: 'POST',
                                 url: "${zenodo_api_url}user/github/repositories/${repo_id}/enable"
-                    
+
                 }
             }
         }
@@ -329,7 +329,7 @@ pipeline {
                 expression {need_zenodo_retrigger}
             }
             environment {
-                ZENODO_TOKEN = credentials('zenodo')  
+                ZENODO_TOKEN = credentials('zenodo')
             }
             steps {
                 checkout scm
@@ -353,7 +353,7 @@ pipeline {
                         }
                     }
                     // Now, retrigger all releases to trigger Zenodo integration
-                    
+
                     repository = sh (returnStdout: true, script: "curl -s ${github_api_url}").trim()
 
                     // Get all relreases from GitHub API
@@ -362,11 +362,11 @@ pipeline {
                                url: "${github_api_url}/releases"
                     releases = readJSON text: releases.content
 
-                    // Uncomment this to retrigger all releases in reverse order, 
+                    // Uncomment this to retrigger all releases in reverse order,
                     // and comment the next line
                     // releases = releases.reverse()
                     // Sync only the last release
-                    releases = [releases[0]] 
+                    releases = [releases[0]]
 
 
                     for (release in releases) {
@@ -390,7 +390,7 @@ pipeline {
                 expression {need_zenodo_retrigger}
             }
             environment {
-                ZENODO_TOKEN = credentials('zenodo')  
+                ZENODO_TOKEN = credentials('zenodo')
             }
             steps {
                 checkout scm
@@ -407,7 +407,7 @@ pipeline {
                                httpMode: 'GET',
                                url: "${zenodo_api_url}/records?size=1&q=${query}"
                     response = readJSON text: response.content
-                    
+
                     zenodo_doi = response["hits"]["hits"][0]["links"]["parent_doi"]
                 }
             }
@@ -419,14 +419,14 @@ pipeline {
                 expression {zenodo_doi}
             }
             environment {
-                GITHUB_TOKEN = credentials('github-ai4os-hub')  
+                GITHUB_TOKEN = credentials('github-ai4os-hub')
             }
             steps {
                 script {
                     // Checkout the repository
                     checkout scm
 
-                    // Create a new branch, using shell, append a random suffix 
+                    // Create a new branch, using shell, append a random suffix
                     sh "git checkout -b zenodo-integration-${BUILD_NUMBER}"
 
                     // V1 metadata
@@ -464,7 +464,7 @@ pipeline {
                     // Setup git user
                     sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
                     sh "git config --global user.name 'AI4EOSC Jenkins user'"
-            
+
                     // Now commit the changes
                     sh "git add metadata.json .ai4-metadata.json"
                     sh "git commit -m 'Add Zenodo DOI to metadata file(s)'"
