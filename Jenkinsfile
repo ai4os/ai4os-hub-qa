@@ -481,6 +481,10 @@ pipeline {
                     // V1 metadata
                     meta = readJSON file: "metadata.json"
 
+                    // Setup git user
+                    sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
+                    sh "git config --global user.name 'AI4EOSC Jenkins user'"
+
                     // If Zenodo DOI is not in metadata.json, add it
                     if (!meta["sources"].containsKey("zenodo_doi")) {
                         meta["sources"]["zenodo_doi"] = zenodo_doi
@@ -490,12 +494,14 @@ pipeline {
                         }
 
                         writeJSON file: "metadata.json", json: meta, pretty: 4
+
+                        sh "git add metadata.json"
                     }
 
                     // V2 metadata
                     // Check if .ai4-metadata.json exists
-                    if (fileExists(".ai4-metadata.json")) {
-                        meta = readJSON file: ".ai4-metadata.json"
+                    if (fileExists("ai4-metadata.json")) {
+                        meta = readJSON file: "ai4-metadata.json"
 
                         // If Zenodo DOI is not in metadata.json, add it
                         if (!meta["sources"].containsKey("zenodo_doi")) {
@@ -505,7 +511,9 @@ pipeline {
                                 meta["doi"] = zenodo_doi.split("/")[-2] + "/" + zenodo_doi.split("/")[-1]
                             }
 
-                            writeJSON file: ".ai4-metadata.json", json: meta, pretty: 4
+                            writeJSON file: "ai4-metadata.json", json: meta, pretty: 4
+
+                            sh "git add ai4-metadata.json"
                         }
 
                     }
@@ -516,6 +524,28 @@ pipeline {
             
                     // Now commit the changes
                     sh "git add metadata.json .ai4-metadata.json"
+                    
+                    // V2 metadata
+                    // Check if .ai4-metadata.json exists
+                    if (fileExists("ai4-metadata.yml")) {
+                        meta = readYaml file: "ai4-metadata.yml"
+
+                        // If Zenodo DOI is not in metadata.yml, add it
+
+                        if (!meta["sources"].containsKey("zenodo_doi")) {
+                            meta["sources"]["zenodo_doi"] = zenodo_doi
+
+                            if (!meta.containsKey("doi"))
+                                meta["doi"] = zenodo_doi.split("/")[-2] + "/" + zenodo_doi.split("/")[-1]
+                            }
+
+                            writeYaml file: "ai4-metadata.yml", data: meta, pretty: 4
+
+                            sh "git add ai4-metadata.yml"
+                        }
+
+                    }
+
                     sh "git commit -m 'Add Zenodo DOI to metadata file(s)'"
 
                     // Push the changes to the repository
