@@ -126,7 +126,38 @@ pipeline {
                 }
             }
         }
+        stage("Check if only metadata files have changed") {
+            steps {
+                script {
+                    // Check if only metadata files have been changed
+
+                    // Get the list of changed files
+                    changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
+
+                    // we need to check here if the change only affects any of the metadata files, but not the code
+                    // we can't use "git diff --name-only HEAD^ HEAD" as it will return all files changed in the commit
+                    // we need to check if the metadata files are present in the list of changed files
+
+                    need_build = true
+
+                    // Check if metadata files are present in the list of changed files
+                    if (changed_files.contains("metadata.json") || changed_files.contains("ai4-metadata.json") || changed_files.contains("ai4-metadata.yml")) {
+                        // Convert to an array and pop items
+                        changed_files = changed_files.tokenize()
+                        changed_files.removeAll(["metadata.json", "ai4-metadata.json", "ai4-metadata.yml"])
+                        // now check if the list is empty
+                        if (changed_files.size() == 0) {
+                            need_build = false
+                        }
+                    }
+                }
+            }
+        }
         stage("User-defined module pipeline job") {
+            when {
+                expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {need_build}
+            }
             steps {
                 //sh 'printenv'
                 script {
@@ -137,6 +168,7 @@ pipeline {
         stage("Docker Variable initialization") {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {need_build}
             }
             environment {
                 AI4OS_REGISTRY_CREDENTIALS = credentials('AIOS-registry-credentials')
@@ -167,6 +199,7 @@ pipeline {
                     branch 'release/*'
                 }
                 expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {need_build}
             }
             steps {
                 checkout scm
@@ -268,6 +301,7 @@ pipeline {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
                 expression {docker_ids.size() > 0}
+                expression {need_build}
             }
             steps {
                 script {
