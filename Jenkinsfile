@@ -269,12 +269,14 @@ pipeline {
                             } catch (err) {
                                 // if $jenkinsconstants_file not found or one of base_cpu|gpu_tag is not defined or none of them, build docker image with default params
                                 println("[WARNING] Exception: ${err}")
-                                println("[INFO] Using default parameters for Docker image building")
-                                image_id = docker.build(image, "--no-cache --force-rm -f ${dockerfile} .")
+                                println("[INFO] Using default parameters for Docker image building. Using ${env.BRANCH_NAME} branch")
+                                image_id = docker.build(image, 
+                                                        "--no-cache --force-rm --build-arg branch=${env.BRANCH_NAME} -f ${dockerfile} .")
                             }
                             // build "-cpu" image, if configured
                             if (build_cpu_tag) {
-                                image_id = docker.build(image, "--no-cache --force-rm --build-arg tag=${base_cpu_tag} -f ${dockerfile} .")
+                                image_id = docker.build(image, 
+                                                        "--no-cache --force-rm --build-arg branch=${env.BRANCH_NAME} --build-arg tag=${base_cpu_tag} -f ${dockerfile} .")
                                 // define additional docker_tag_cpu to mark it as "cpu" version
                                 docker_tag_cpu = (docker_tag == "latest") ? "cpu" : (docker_tag + "-cpu")
                                 image_cpu = docker_repository + "/" + image_name + ":" + docker_tag_cpu
@@ -299,7 +301,8 @@ pipeline {
                                 // define additional docker_tag_gpu to mark "gpu" version
                                 docker_tag_gpu = (docker_tag == "latest") ? "gpu" : (docker_tag + "-gpu")
                                 image = docker_repository + "/" + image_name + ":" + docker_tag_gpu
-                                image_id = docker.build(image, "--no-cache --force-rm --build-arg tag=${base_gpu_tag}  -f ${dockerfile} .")
+                                image_id = docker.build(image,
+                                                        "--no-cache --force-rm --build-arg branch=${env.BRANCH_NAME} --build-arg tag=${base_gpu_tag} -f ${dockerfile} .")
                                 docker_ids.add(image)
                             }
 
