@@ -289,6 +289,7 @@ pipeline {
                             // do it with only "cpu|default" image: 
                             // a) can stop before proceeding with "gpu" version b) "gpu" may fail without GPU hardware anyway
                             if (env.BRANCH_NAME != 'cicd') {
+                                sh "rm -rf ai4os-hub-check-artifact"
                                 sh "git clone https://github.com/ai4os/ai4os-hub-check-artifact"
                                 sh "bash ai4os-hub-check-artifact/check-artifact ${image}"
                                 sh "rm -rf ai4os-hub-check-artifact"
