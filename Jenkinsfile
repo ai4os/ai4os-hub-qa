@@ -21,6 +21,50 @@ pipeline {
     }
 
     stages {
+        stage("Check if only metadata files have changed") {
+            steps {
+                script {
+                    // Check if only metadata files have been changed
+
+                    // Get the list of changed files
+                    changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
+
+                    // we need to check here if the change only affects any of the metadata files, but not the code
+                    // we can't use "git diff --name-only HEAD^ HEAD" as it will return all files changed in the commit
+                    // we need to check if the metadata files are present in the list of changed files
+
+                    need_build = true
+
+                    // Check if metadata files are present in the list of changed files
+                    if (changed_files.contains("metadata.json") || changed_files.contains("ai4-metadata.json") || changed_files.contains("ai4-metadata.yml")) {
+                        // Convert to an array and pop items
+                        changed_files = changed_files.tokenize()
+                        changed_files.removeAll(["metadata.json", "ai4-metadata.json", "ai4-metadata.yml"])
+                        // now check if the list is empty
+                        if (changed_files.size() == 0) {
+                            need_build = false
+                        }
+                    }
+                }
+            }
+        }
+
+        // Let's run user tests for all repos
+        stage("User-defined module pipeline job") {
+            when {
+                anyOf {
+                    expression {need_build}
+                    triggeredBy 'UserIdCause'
+                }   
+            }
+            steps {
+                //sh 'printenv'
+                script {
+                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
+                }
+            }
+        }
+
         stage('Metadata tests') {
             parallel {
                 stage('AI4OS Hub metadata V1 validation') {
@@ -126,45 +170,7 @@ pipeline {
                 }
             }
         }
-        stage("Check if only metadata files have changed") {
-            steps {
-                script {
-                    // Check if only metadata files have been changed
 
-                    // Get the list of changed files
-                    changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
-
-                    // we need to check here if the change only affects any of the metadata files, but not the code
-                    // we can't use "git diff --name-only HEAD^ HEAD" as it will return all files changed in the commit
-                    // we need to check if the metadata files are present in the list of changed files
-
-                    need_build = true
-
-                    // Check if metadata files are present in the list of changed files
-                    if (changed_files.contains("metadata.json") || changed_files.contains("ai4-metadata.json") || changed_files.contains("ai4-metadata.yml")) {
-                        // Convert to an array and pop items
-                        changed_files = changed_files.tokenize()
-                        changed_files.removeAll(["metadata.json", "ai4-metadata.json", "ai4-metadata.yml"])
-                        // now check if the list is empty
-                        if (changed_files.size() == 0) {
-                            need_build = false
-                        }
-                    }
-                }
-            }
-        }
-        stage("User-defined module pipeline job") {
-            when {
-                expression {env.MODULES.contains(env.THIS_REPO)}
-                expression {need_build}
-            }
-            steps {
-                //sh 'printenv'
-                script {
-                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
-                }
-            }
-        }
         stage("Docker build and delivery") {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
@@ -177,8 +183,10 @@ pipeline {
                     branch 'dev'
                     branch 'release/*'
                 }
-                
-                expression {need_build}
+                anyOf {
+                    expression {need_build}
+                    triggeredBy 'UserIdCause'
+                }
             }
 
             stages {
