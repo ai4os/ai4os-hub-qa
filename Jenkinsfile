@@ -30,7 +30,7 @@ pipeline {
                     }
                     agent {
                         docker {
-                            image 'python:3.12'
+                            image 'ai4oshub/ci-images:python3.12'
                         }
                     }
                     steps {
@@ -42,13 +42,8 @@ pipeline {
                             env.METADATA_FILE = "metadata.json"
                         }
 
-                        withEnv([
-                            "HOME=${env.WORKSPACE}",
-                        ]) {
-                            script {
-                                sh "pip install ai4-metadata"
-                                sh ".local/bin/ai4-metadata-validator --metadata-version 1.0.0 metadata.json"
-                            }
+                        script {
+                            sh "ai4-metadata validate --metadata-version 1.0.0 metadata.json"
                         }
                     }
                 }
@@ -60,7 +55,7 @@ pipeline {
                     }
                     agent {                 
                         docker {
-                            image 'python:3.12'
+                            image 'ai4oshub/ci-images:python3.12'
                         }
                     }
                     steps {
@@ -74,13 +69,8 @@ pipeline {
                             }
                             env.METADATA_FILE = "ai4-metadata.json"
                         }
-                        withEnv([
-                            "HOME=${env.WORKSPACE}",
-                        ]) {
-                            script {
-                                sh "pip install ai4-metadata"
-                                sh ".local/bin/ai4-metadata-validator --metadata-version 2.0.0 ai4-metadata.json"
-                            }
+                        script {
+                            sh "ai4-metadata validate --metadata-version 2.0.0 ai4-metadata.json"
                         }
                     }
                 }
@@ -92,7 +82,7 @@ pipeline {
                     }
                     agent {                 
                         docker {
-                            image 'python:3.12'
+                            image 'ai4oshub/ci-images:python3.12'
                         }
                     }
                     steps {
@@ -103,18 +93,9 @@ pipeline {
                             if (fileExists("ai4-metadata.json")) {
                                 error("Both ai4-metadata.json and ai4-metadata.yml files found in the repository")
                             }
-                            // load YAML file, dump as JSON
-                            metadata = readYaml file: "ai4-metadata.yml"
-                                writeJSON file: "ai4-metadata-${BUILD_NUMBER}.json", json: metadata
-                            env.METADATA_FILE = "ai4-metadata-${BUILD_NUMBER}.json"
                         }
-                        withEnv([
-                            "HOME=${env.WORKSPACE}",
-                        ]) {
-                            script {
-                                sh "pip install ai4-metadata"
-                                sh ".local/bin/ai4-metadata-validator --metadata-version 2.0.0 ai4-metadata-${BUILD_NUMBER}.json"
-                            }
+                        script {
+                            sh "ai4-metadata validate --metadata-version 2.0.0 ai4-metadata.yml"
                         }
                     }
                 }
