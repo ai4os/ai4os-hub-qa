@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0](https://github.com/ai4os/ai4os-hub-qa/compare/v1.1.0...v1.2.0) (2024-08-22)
+
+
+### Features
+
+* re-order stages, execute User tests for all repos ([c1b2c4f](https://github.com/ai4os/ai4os-hub-qa/commit/c1b2c4f937ab1f3721e3a783329e2700ba5e42c9))
+* use ai4os CI images ([c224c83](https://github.com/ai4os/ai4os-hub-qa/commit/c224c83d212769f541c711d33da0b89007a507f5))
+* when only metadata files have changed, run only metadata tests ([#11](https://github.com/ai4os/ai4os-hub-qa/issues/11)) ([840d6ff](https://github.com/ai4os/ai4os-hub-qa/commit/840d6ff19280f95d3aece1d8351fb2c2fd3100bf)), closes [#9](https://github.com/ai4os/ai4os-hub-qa/issues/9)
+
+
+### Bug Fixes
+
+* always execut rm -rf ai4os-hub-check-artifact ([e12f288](https://github.com/ai4os/ai4os-hub-qa/commit/e12f288b26847024b28cb1485a4b4bf1c8759260))
+* in the Docker image build process, trying to take into account the current git branch ([b4e331f](https://github.com/ai4os/ai4os-hub-qa/commit/b4e331fd8da119b37d6a2fb70c20735ba66cb580))
+* revert back order of stages; feat: read V1/V2 metadata for Docker image build ([bf7d083](https://github.com/ai4os/ai4os-hub-qa/commit/bf7d083b61d14ec4e53b5f0d1674b8acfd9bd426))
+
 ## [1.1.0](https://github.com/ai4os/ai4os-hub-qa/compare/1.0.0...v1.1.0) (2024-08-12)
 
 
