@@ -325,7 +325,7 @@ pipeline {
                 }                
             }
             environment {
-                OSCAR_SERVICE_TOKEN = credentials('mytoken-token')
+                OSCAR_SERVICE_TOKEN = credentials('oscar-service-token')
             }
 
             steps {
