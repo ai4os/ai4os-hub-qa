@@ -329,14 +329,16 @@ pipeline {
             }
 
             steps {
-                script {
-                    // Checkout the QA repo to get access to the script
-                    dir("_ai4os-hub-qa") {
-                        git branch: env.BRANCH_NAME,
-                        url: 'https://github.com/ai4os/ai4os-hub-qa'
+                withFolderProperties {
+                    script {
+                        // Checkout the QA repo to get access to the script
+                        dir("_ai4os-hub-qa") {
+                            git branch: env.BRANCH_NAME,
+                            url: 'https://github.com/ai4os/ai4os-hub-qa'
+                        }
+    
+                        sh "./_ai4os-hub-qa/scripts/oscar_update.py"
                     }
-
-                    sh "./_ai4os-hub-qa/scripts/oscar_update.py"
                 }
             }
         }
