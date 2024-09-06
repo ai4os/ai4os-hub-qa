@@ -319,6 +319,11 @@ pipeline {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
+            agent {                 
+                docker {
+                    image 'ai4oshub/ci-images:python3.12'
+                }                
+            }
             environment {
                 OSCAR_SERVICE_TOKEN = credentials('mytoken-token')
             }
