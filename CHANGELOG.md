@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.0](https://github.com/ai4os/ai4os-hub-qa/compare/v1.2.0...v1.3.0) (2024-09-16)
+
+
+### Features
+
+* enable OSCAR notifications ([467fb26](https://github.com/ai4os/ai4os-hub-qa/commit/467fb26b5ff0f7ea9ea720ff53aa9a6caf0ab9eb))
+
+
+### Bug Fixes
+
+* fetch master branch for OSCAR services ([64160ba](https://github.com/ai4os/ai4os-hub-qa/commit/64160bae27838cfde57e902f12469d02dcd62871))
+* fetch master branch for OSCAR services update ([5a00fca](https://github.com/ai4os/ai4os-hub-qa/commit/5a00fca377d04885e135a6ab93834864b17b117a))
+* run OSCAR stage in Docker ([653eec3](https://github.com/ai4os/ai4os-hub-qa/commit/653eec323b120abeb65d92d56f5a99a65f0abbc7))
+* setup env vars for script with folder properties ([75c7511](https://github.com/ai4os/ai4os-hub-qa/commit/75c75116193f1540c96d5fdcb4eeb41d2e1c2826))
+* use oscar-service-token credentials ([9a4cf8b](https://github.com/ai4os/ai4os-hub-qa/commit/9a4cf8b455d2bc30e4346954fda3da39e12e6f71))
+
 ## [1.2.0](https://github.com/ai4os/ai4os-hub-qa/compare/v1.1.0...v1.2.0) (2024-08-22)
 
 
