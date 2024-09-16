@@ -332,6 +332,7 @@ pipeline {
                 withFolderProperties {
                     script {
                         dir("_ai4os-hub-qa") {
+                            git branch: "master",
                             url: 'https://github.com/ai4os/ai4os-hub-qa'
                         }
     
