@@ -117,8 +117,11 @@ pipeline {
                 script {
                     // Check if only metadata files have been changed
 
-                    // Get the list of changed files
-                    changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
+                    // Get the list of changed files. We need to check if the
+                    // change only affects metadata files but not only with
+                    // previous commit, but with previos suucessful commit
+                    // See https://github.com/ai4os/ai4os-hub-qa/issues/16
+                    changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
 
                     // we need to check here if the change only affects any of the metadata files, but not the code
                     // we can't use "git diff --name-only HEAD^ HEAD" as it will return all files changed in the commit
