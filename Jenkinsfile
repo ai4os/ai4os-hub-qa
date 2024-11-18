@@ -121,11 +121,14 @@ pipeline {
                     // change only affects metadata files but not only with
                     // previous commit, but with previos successful commit
                     // See https://github.com/ai4os/ai4os-hub-qa/issues/16
-                    // If there is no GIT_PREVIOUS_SUCCESSFUL_COMMIT (e.g. First time build),
-                    // we fall back to last commit 
-                    if (env.GIT_PREVIOUS_SUCCESSFUL_COMMIT) {
+                    // If GIT_PREVIOUS_SUCCESSFUL_COMMIT fails
+                    // (e.g. First time build, commits were rewritten by user),
+                    // we fallback to last commit
+                    try {
                         changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
-                    } else {
+                    } catch (err) {
+                        println("[WARNING] Exception: ${err}")
+                        println("[INFO] Considering changes only in the last commit.."
                         changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
                     }
 
