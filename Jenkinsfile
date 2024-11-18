@@ -128,7 +128,7 @@ pipeline {
                         changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
                     } catch (err) {
                         println("[WARNING] Exception: ${err}")
-                        println("[INFO] Considering changes only in the last commit.."
+                        println("[INFO] Considering changes only in the last commit..")
                         changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
                     }
 
