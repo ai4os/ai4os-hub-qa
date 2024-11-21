@@ -14,7 +14,7 @@ pipeline {
 
     environment {
         // Remove .git from the GIT_URL link
-        THIS_REPO = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
+        REPO_URL = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
         // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
         MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
@@ -26,7 +26,7 @@ pipeline {
             parallel {
                 stage('AI4OS Hub metadata V1 validation') {
                     when {
-                        expression {env.MODULES.contains(env.THIS_REPO)}
+                        expression {env.MODULES.contains(env.REPO_URL)}
                     }
                     agent {
                         docker {
@@ -49,7 +49,7 @@ pipeline {
                 }
                 stage('AI4OS Hub metadata V2 validation (JSON)') {
                     when {
-                        expression {env.MODULES.contains(env.THIS_REPO)}
+                        expression {env.MODULES.contains(env.REPO_URL)}
                         // Check if metadata.json is present in the repository
                         expression {fileExists("ai4-metadata.json")}
                     }
@@ -76,7 +76,7 @@ pipeline {
                 }
                 stage('AI4OS Hub metadata V2 validation (YAML)') {
                     when {
-                        expression {env.MODULES.contains(env.THIS_REPO)}
+                        expression {env.MODULES.contains(env.REPO_URL)}
                         // Check if metadata.json is present in the repository
                         expression {fileExists("ai4-metadata.yml")}
                     }
@@ -170,7 +170,7 @@ pipeline {
 
         stage("Docker build and delivery") {
             when {
-                expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {env.MODULES.contains(env.REPO_URL)}
 
                 anyOf {
                     branch 'cicd'
@@ -327,9 +327,46 @@ pipeline {
                 }
             }
         }
+
+        stage("Update Catalog page") {
+            when {
+                expression {env.MODULES.contains(env.REPO_URL)}
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                    branch 'release/*'
+                    triggeredBy 'UserIdCause'
+                }
+            }
+            environment {
+                // AI4OS-PAPI-refresh-secret has to be set in Jenkins
+                AI4OS_PAPI_SECRET = credentials('AI4OS-PAPI-refresh-secret')
+            }
+            steps {
+                script {
+                    // extract REPO_NAME from REPO_URL (.git already removed from REPO_URL)
+                    REPO_NAME = "${REPO_URL.tokenize('/')[-1]}"
+                    // build PAPI route to refresh the module
+                    withFolderProperties {
+                        // retrieve PAPI_URL and remove trailing slash "/" (AI4OS_PAPI_URL is set in Jenkins)
+                        AI4OS_PAPI_URL = "${env.AI4OS_PAPI_URL.endsWith("/") ? env.AI4OS_PAPI_URL[0..-2] : env.AI4OS_PAPI_URL}"
+                    }
+                    PAPI_REFRESH_URL = "${AI4OS_PAPI_URL}/v1/catalog/modules/${REPO_NAME}/refresh"
+                    // have to use "'" to avoid injection of credentials
+                    // see https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
+                    CURL_PAPI_CALL = "curl -si -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " + 
+                        '-H "Authorization: Bearer $AI4OS_PAPI_SECRET"'
+                    response = sh (returnStdout: true, script: CURL_PAPI_CALL).trim()
+                    status_code = sh (returnStdout: true, script: "echo '${response}' |grep HTTP | awk '{print \$2}'").trim().toInteger()
+                    if (status_code != 200 && status_code != 201) {
+                        error("Returned status code = $status_code when calling $PAPI_REFRESH_URL")
+                    }
+                }
+            }
+        }
         stage('Update OSCAR services') {
             when {
-                expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {env.MODULES.contains(env.REPO_URL)}
             }
             agent {                 
                 docker {
