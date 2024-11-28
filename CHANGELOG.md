@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.3.0](https://github.com/ai4os/ai4os-hub-qa/compare/v1.2.0...v1.3.0) (2024-11-28)
+
+
+### Features
+
+* add 'Update Catalog page' stage ([#20](https://github.com/ai4os/ai4os-hub-qa/issues/20)) ([2e69599](https://github.com/ai4os/ai4os-hub-qa/commit/2e6959976b8fac887a8c9a61561db3dfd60f8416))
+* enable OSCAR notifications ([467fb26](https://github.com/ai4os/ai4os-hub-qa/commit/467fb26b5ff0f7ea9ea720ff53aa9a6caf0ab9eb))
+
+
+### Bug Fixes
+
+* cases when GIT_PREVIOUS_SUCCESSFUL_COMMIT fails ([798b9ef](https://github.com/ai4os/ai4os-hub-qa/commit/798b9efff75618ade164806d0040921b86b1d84c)), closes [#18](https://github.com/ai4os/ai4os-hub-qa/issues/18)
+* check for modified files with previous success commit ([#17](https://github.com/ai4os/ai4os-hub-qa/issues/17)) ([47c704f](https://github.com/ai4os/ai4os-hub-qa/commit/47c704fae05c72d9a451188b0784eac256e4e5b7))
+* fetch master branch for OSCAR services ([64160ba](https://github.com/ai4os/ai4os-hub-qa/commit/64160bae27838cfde57e902f12469d02dcd62871))
+* fetch master branch for OSCAR services update ([5a00fca](https://github.com/ai4os/ai4os-hub-qa/commit/5a00fca377d04885e135a6ab93834864b17b117a))
+* run OSCAR stage in Docker ([653eec3](https://github.com/ai4os/ai4os-hub-qa/commit/653eec323b120abeb65d92d56f5a99a65f0abbc7))
+* setup env vars for script with folder properties ([75c7511](https://github.com/ai4os/ai4os-hub-qa/commit/75c75116193f1540c96d5fdcb4eeb41d2e1c2826))
+* typo in Jenkinsfile ([2b9517b](https://github.com/ai4os/ai4os-hub-qa/commit/2b9517bd40494dd6f4c84b7810334c734c3c7fdb))
+* typo in Jenkinsfile ( ")" ) ([2b9517b](https://github.com/ai4os/ai4os-hub-qa/commit/2b9517bd40494dd6f4c84b7810334c734c3c7fdb))
+* use oscar-service-token credentials ([9a4cf8b](https://github.com/ai4os/ai4os-hub-qa/commit/9a4cf8b455d2bc30e4346954fda3da39e12e6f71))
+
 ## [1.2.0](https://github.com/ai4os/ai4os-hub-qa/compare/v1.1.0...v1.2.0) (2024-08-22)
 
 
