@@ -24,6 +24,7 @@ pipeline {
     stages {
         stage('Metadata tests') {
             parallel {
+
                 stage('AI4OS Hub metadata V1 validation') {
                     when {
                         expression {env.MODULES.contains(env.REPO_URL)}
@@ -47,13 +48,14 @@ pipeline {
                         }
                     }
                 }
+
                 stage('AI4OS Hub metadata V2 validation (JSON)') {
                     when {
                         expression {env.MODULES.contains(env.REPO_URL)}
                         // Check if metadata.json is present in the repository
                         expression {fileExists("ai4-metadata.json")}
                     }
-                    agent {                 
+                    agent {
                         docker {
                             image 'ai4oshub/ci-images:python3.12'
                         }
@@ -74,6 +76,7 @@ pipeline {
                         }
                     }
                 }
+
                 stage('AI4OS Hub metadata V2 validation (YAML)') {
                     when {
                         expression {env.MODULES.contains(env.REPO_URL)}
@@ -99,6 +102,7 @@ pipeline {
                         }
                     }
                 }
+                
                 stage("License validation") {
                     steps {
                         script {
@@ -158,7 +162,7 @@ pipeline {
                 anyOf {
                     expression {need_build}
                     triggeredBy 'UserIdCause'
-                }   
+                }
             }
             steps {
                 //sh 'printenv'
@@ -198,9 +202,9 @@ pipeline {
                                 docker_repository = env.AI4OS_REGISTRY_REPOSITORY
                             }
                             docker_ids = []
-                            
+
                             docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
-        
+
                             // Check here if variables exist
                         }
                     }
@@ -209,9 +213,8 @@ pipeline {
                 stage('AI4OS Hub Docker images build') {
                     steps {
                         checkout scm
-        
+
                         script {
-        
                             // define docker tag depending on the branch/release
                             if ( env.BRANCH_NAME.startsWith("release/") ) {
                                 docker_tag = env.BRANCH_NAME.drop(8)
@@ -223,7 +226,7 @@ pipeline {
                                 docker_tag = env.BRANCH_NAME
                             }
                             docker_tag = docker_tag.toLowerCase()
-        
+
                             // get docker image name from metadata.json / ai4-metadata.json
                             meta = readJSON file: env.METADATA_FILE
                             if (env.METADATA_FILE == "metadata.json") {
@@ -231,7 +234,7 @@ pipeline {
                             } else {
                                 image_name = meta["links"]["docker_image"].split("/")[1]
                             }
-                            
+
                             // use preconfigured in Jenkins docker_repository
                             // XXX may confuse users? (e.g. expect xyz/myimage, but we push to ai4hub/myimage)
                             image = docker_repository + "/" + image_name + ":" + docker_tag
@@ -311,6 +314,7 @@ pipeline {
                         }
                     }
                 }
+
                 stage('AI4OS Hub Docker delivery to registry') {
                     when {
                         expression {docker_ids.size() > 0}
@@ -361,13 +365,12 @@ pipeline {
                             return
                         }
                     }
-                    
+
                     need_zenodo_retrigger = true
                     // Otherwise, enable Zenodo integration
                     httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
                                 httpMode: 'POST',
                                 url: "${zenodo_api_url}user/github/repositories/${repo_id}/enable"
-                    
                 }
             }
         }
@@ -402,7 +405,7 @@ pipeline {
                         }
                     }
                     // Now, retrigger all releases to trigger Zenodo integration
-                    
+
                     repository = sh (returnStdout: true, script: "curl -s ${github_api_url}").trim()
 
                     // Get all relreases from GitHub API
@@ -416,7 +419,6 @@ pipeline {
                     // releases = releases.reverse()
                     // Sync only the last release
                     releases = [releases[0]] 
-
 
                     for (release in releases) {
                         println("Retriggering release: ${release.tag_name}")
@@ -433,13 +435,14 @@ pipeline {
                 }
             }
         }
+
         stage('Get Zenodo DOI') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
                 expression {need_zenodo_retrigger}
             }
             environment {
-                ZENODO_TOKEN = credentials('zenodo')  
+                ZENODO_TOKEN = credentials('zenodo')
             }
             steps {
                 checkout scm
@@ -456,11 +459,12 @@ pipeline {
                                httpMode: 'GET',
                                url: "${zenodo_api_url}/records?size=1&q=${query}"
                     response = readJSON text: response.content
-                    
+
                     zenodo_doi = response["hits"]["hits"][0]["links"]["parent_doi"]
                 }
             }
         }
+
         stage('Update metadata files') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
@@ -521,10 +525,10 @@ pipeline {
                     // Setup git user
                     sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
                     sh "git config --global user.name 'AI4EOSC Jenkins user'"
-            
+
                     // Now commit the changes
                     sh "git add metadata.json .ai4-metadata.json"
-                    
+
                     // V2 metadata
                     // Check if .ai4-metadata.json exists
                     if (fileExists("ai4-metadata.yml")) {
@@ -621,14 +625,15 @@ pipeline {
                 }
             }
         }
+
         stage('Update OSCAR services') {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
             }
-            agent {                 
+            agent {
                 docker {
                     image 'ai4oshub/ci-images:python3.12'
-                }                
+                }
             }
             environment {
                 OSCAR_SERVICE_TOKEN = credentials('oscar-service-token')
@@ -641,7 +646,7 @@ pipeline {
                             git branch: "master",
                             url: 'https://github.com/ai4os/ai4os-hub-qa'
                         }
-    
+
                         sh "./_ai4os-hub-qa/scripts/oscar_update.py"
                     }
                 }
@@ -660,4 +665,3 @@ pipeline {
         }
     }
 }
-
