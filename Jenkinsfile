@@ -27,6 +27,9 @@ pipeline {
                 stage('AI4OS Hub metadata V1 validation') {
                     when {
                         expression {env.MODULES.contains(env.REPO_URL)}
+                        // all repos suppose to have ai4-metadata.yml,
+                        // metadata.json is not mandatory vk@250219
+                        expression {fileExists("metadata.json")}
                     }
                     agent {
                         docker {
@@ -35,14 +38,7 @@ pipeline {
                     }
                     steps {
                         script {
-                            // Check if .metadata.json is present in the repository
-                            if (!fileExists("metadata.json")) {
-                                error("metadata.json file not found in the repository")
-                            }
                             env.METADATA_FILE = "metadata.json"
-                        }
-
-                        script {
                             sh "ai4-metadata validate --metadata-version 1.0.0 metadata.json"
                         }
                     }
