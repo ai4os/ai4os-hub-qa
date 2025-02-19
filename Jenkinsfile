@@ -15,6 +15,7 @@ pipeline {
     environment {
         // Remove .git from the GIT_URL link
         REPO_URL = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
+        REPO_NAME = "${REPO_URL.tokenize('/')[-1]}"
         // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
         MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
@@ -91,6 +92,7 @@ pipeline {
                             }
                         }
                         script {
+                            env.METADATA_FILE = "ai4-metadata.yml"
                             sh "ai4-metadata validate --metadata-version 2.0.0 ai4-metadata.yml"
                         }
                     }
@@ -220,14 +222,23 @@ pipeline {
                             }
                             docker_tag = docker_tag.toLowerCase()
         
-                            // get docker image name from metadata.json / ai4-metadata.json
-                            meta = readJSON file: env.METADATA_FILE
+                            // get docker image name from metadata.json
                             if (env.METADATA_FILE == "metadata.json") {
-                                image_name = meta["sources"]["docker_registry_repo"].split("/")[1] 
-                            } else {
+                                meta = readJSON file: env.METADATA_FILE
+                                image_name = meta["sources"]["docker_registry_repo"].split("/")[1]
+                            }
+                            // get docker image name from ai4-metadata.json
+                            if (env.METADATA_FILE == "ai4-metadata.json") {
+                                meta = readJSON file: env.METADATA_FILE
                                 image_name = meta["links"]["docker_image"].split("/")[1]
                             }
-                            
+                            // get docker image name from ai4-metadata.yml
+                            if (env.METADATA_FILE == "ai4-metadata.yml") {
+                                image_name = env.REPO_NAME
+                                //meta = readYAML file: env.METADATA_FILE
+                                //image_name = meta["links"]["docker_image"].split("/")[1]
+                            }
+
                             // use preconfigured in Jenkins docker_repository
                             // XXX may confuse users? (e.g. expect xyz/myimage, but we push to ai4hub/myimage)
                             image = docker_repository + "/" + image_name + ":" + docker_tag
