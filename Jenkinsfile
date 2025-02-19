@@ -93,6 +93,7 @@ pipeline {
                         }
                         script {
                             env.METADATA_FILE = "ai4-metadata.yml"
+                            println("[INFO] Using ${env.METADATA_FILE} metadata file")
                             sh "ai4-metadata validate --metadata-version 2.0.0 ai4-metadata.yml"
                         }
                     }
@@ -221,22 +222,24 @@ pipeline {
                                 docker_tag = env.BRANCH_NAME
                             }
                             docker_tag = docker_tag.toLowerCase()
-        
+
+                            println("[INFO] (2) Using ${env.METADATA_FILE} metadata file")
+                            image_name = env.REPO_NAME
+                            // get docker image name from ai4-metadata.yml
+                            //if (env.METADATA_FILE == "ai4-metadata.yml") {
+                                //meta = readYAML file: env.METADATA_FILE
+                                //image_name = meta["links"]["docker_image"].split("/")[1]
+                            //}
+
                             // get docker image name from metadata.json
-                            if (env.METADATA_FILE == "metadata.json") {
+                            if (env.METADATA_FILE == "metadata.json" && fileExists("metadata.json")) {
                                 meta = readJSON file: env.METADATA_FILE
                                 image_name = meta["sources"]["docker_registry_repo"].split("/")[1]
                             }
                             // get docker image name from ai4-metadata.json
-                            if (env.METADATA_FILE == "ai4-metadata.json") {
+                            if (env.METADATA_FILE == "ai4-metadata.json" && fileExists("ai4-metadata.json")) {
                                 meta = readJSON file: env.METADATA_FILE
                                 image_name = meta["links"]["docker_image"].split("/")[1]
-                            }
-                            // get docker image name from ai4-metadata.yml
-                            if (env.METADATA_FILE == "ai4-metadata.yml") {
-                                image_name = env.REPO_NAME
-                                //meta = readYAML file: env.METADATA_FILE
-                                //image_name = meta["links"]["docker_image"].split("/")[1]
                             }
 
                             // use preconfigured in Jenkins docker_repository
