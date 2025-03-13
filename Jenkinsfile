@@ -163,7 +163,7 @@ pipeline {
             steps {
                 //sh 'printenv'
                 script {
-                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
+                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10), parameters: [string(name: 'SQA_CONTAINER_NAME', value: "${env.SQA_CONTAINER_NAME}")])
                 }
             }
         }
