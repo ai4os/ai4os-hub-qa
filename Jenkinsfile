@@ -16,6 +16,7 @@ pipeline {
         // Remove .git from the GIT_URL link
         REPO_URL = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
         REPO_NAME = "${REPO_URL.tokenize('/')[-1]}"
+        SQA_CONTAINER_NAME = "${BUILD_TAG}".replace('\/','-').replace('\\','-')
         // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
         MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
