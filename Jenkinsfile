@@ -128,13 +128,13 @@ pipeline {
                     need_build = true
                     try {
                         changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
-                    } catch (err) {
+                    } catch (err_a) {
                         println("[WARNING] Exception: ${err}")
                         println("[INFO] Considering changes only in the last commit..")
                         try {
                             changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
                         }
-                        catch (err) {
+                        catch (err_b) {
                             println("[WARNING] Exception: ${err}")
                             // check if we deal with the initial commit / first commit
                             repo_commits = sh (returnStdout: true, script: "git rev-list HEAD --count").trim()
