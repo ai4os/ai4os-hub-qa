@@ -125,7 +125,8 @@ pipeline {
                     // (e.g. First time build, commits were rewritten by user),
                     // we fallback to last commit
 
-                    def need_build = true
+                    need_build = true
+                    changed_files = ""
 
                     try {
                         changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
@@ -134,8 +135,7 @@ pipeline {
                         println("[INFO] Considering changes only in the last commit..")
                         try {
                             changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
-                        }
-                        catch (Exception exb) {
+                        } catch (Exception exb) {
                             println("[WARNING] Exception: " + exb.toString())
                             // check if we deal with the initial commit / first commit
                             repo_commits = sh (returnStdout: true, script: "git rev-list HEAD --count").trim()
