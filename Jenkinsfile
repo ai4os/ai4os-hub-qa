@@ -124,19 +124,34 @@ pipeline {
                     // If GIT_PREVIOUS_SUCCESSFUL_COMMIT fails
                     // (e.g. First time build, commits were rewritten by user),
                     // we fallback to last commit
+
+                    need_build = true
                     try {
                         changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
                     } catch (err) {
                         println("[WARNING] Exception: ${err}")
                         println("[INFO] Considering changes only in the last commit..")
-                        changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
+                        try {
+                            changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
+                        }
+                        catch (err) {
+                            println("[WARNING] Exception: ${err}")
+                            // check if we deal with the initial commit / first commit
+                            repo_commits = sh (returnStdout: true, script: "git rev-list HEAD --count").trim()
+                            if (repo_commits == 1) {
+                                println("============================ [WARNING] ============================")
+                                println(" It seems this is your FIRST / INITIAL commit")
+                                println(" We run only basic tests. Please, consider further updating the code")
+                                println("============================ [WARNING] ============================")
+                                changed_files = ""
+                                need_build = false
+                            }
+                        }
                     }
 
                     // we need to check here if the change only affects any of the metadata files, but not the code
                     // we can't use "git diff --name-only HEAD^ HEAD" as it will return all files changed in the commit
                     // we need to check if the metadata files are present in the list of changed files
-
-                    need_build = true
 
                     // Check if metadata files are present in the list of changed files
                     if (changed_files.contains("metadata.json") || changed_files.contains("ai4-metadata.json") || changed_files.contains("ai4-metadata.yml")) {
