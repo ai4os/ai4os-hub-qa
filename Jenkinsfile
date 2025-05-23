@@ -28,7 +28,6 @@ pipeline {
             parallel {
                 stage('AI4OS Hub metadata V1 validation') {
                     when {
-                        expression {env.MODULES.contains(env.REPO_URL)}
                         // all repos suppose to have ai4-metadata.yml,
                         // metadata.json is not mandatory vk@250219
                         expression {fileExists("metadata.json")}
@@ -47,8 +46,7 @@ pipeline {
                 }
                 stage('AI4OS Hub metadata V2 validation (JSON)') {
                     when {
-                        expression {env.MODULES.contains(env.REPO_URL)}
-                        // Check if metadata.json is present in the repository
+                        // Check if ai4-metadata.json is present in the repository
                         expression {fileExists("ai4-metadata.json")}
                     }
                     agent {                 
@@ -74,8 +72,7 @@ pipeline {
                 }
                 stage('AI4OS Hub metadata V2 validation (YAML)') {
                     when {
-                        expression {env.MODULES.contains(env.REPO_URL)}
-                        // Check if metadata.json is present in the repository
+                        // Check if ai4-metadata.yml is present in the repository
                         expression {fileExists("ai4-metadata.yml")}
                     }
                     agent {                 
