@@ -438,7 +438,7 @@ pipeline {
                         // retrieve PROVENANCE_URL and remove trailing slash "/"
                         PROVENANCE_URL = "${env.AI4OS_PROVENANCE_URL.endsWith("/") ? env.AI4OS_PROVENANCE_URL[0..-2] : env.AI4OS_PROVENANCE_URL}"
                     }
-                    PROVENANCE_REFRESH_URL = "${PROVENANCE_URL}/meta-data"
+                    PROVENANCE_REFRESH_URL = "${PROVENANCE_URL}/metadata"
 
                     // We have to use "'" to avoid injection of credentials [1]
                     // [1]: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
