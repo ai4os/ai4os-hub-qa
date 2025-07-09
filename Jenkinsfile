@@ -49,7 +49,7 @@ pipeline {
                         // Check if ai4-metadata.json is present in the repository
                         expression {fileExists("ai4-metadata.json")}
                     }
-                    agent {                 
+                    agent {
                         docker {
                             image 'ai4oshub/ci-images:python3.12'
                         }
@@ -75,7 +75,7 @@ pipeline {
                         // Check if ai4-metadata.yml is present in the repository
                         expression {fileExists("ai4-metadata.yml")}
                     }
-                    agent {                 
+                    agent {
                         docker {
                             image 'ai4oshub/ci-images:python3.12'
                         }
@@ -171,7 +171,7 @@ pipeline {
                 anyOf {
                     expression {need_build}
                     triggeredBy 'UserIdCause'
-                }   
+                }
             }
             steps {
                 //sh 'printenv'
@@ -211,9 +211,9 @@ pipeline {
                                 docker_repository = env.AI4OS_REGISTRY_REPOSITORY
                             }
                             docker_ids = []
-                            
+
                             docker_registry_credentials = env.AI4OS_REGISTRY_CREDENTIALS
-        
+
                             // Check here if variables exist
                         }
                     }
@@ -222,9 +222,9 @@ pipeline {
                 stage('AI4OS Hub Docker images build') {
                     steps {
                         checkout scm
-        
+
                         script {
-        
+
                             // define docker tag depending on the branch/release
                             if ( env.BRANCH_NAME.startsWith("release/") ) {
                                 docker_tag = env.BRANCH_NAME.drop(8)
@@ -295,12 +295,12 @@ pipeline {
                                 // if $jenkinsconstants_file not found or one of base_cpu|gpu_tag is not defined or none of them, build docker image with default params
                                 println("[WARNING] Exception: ${err}")
                                 println("[INFO] Using default parameters for Docker image building. Using ${env.BRANCH_NAME} branch")
-                                image_id = docker.build(image, 
+                                image_id = docker.build(image,
                                                         "--no-cache --force-rm --build-arg branch=${env.BRANCH_NAME} -f ${dockerfile} .")
                             }
                             // build "-cpu" image, if configured
                             if (build_cpu_tag) {
-                                image_id = docker.build(image, 
+                                image_id = docker.build(image,
                                                         "--no-cache --force-rm --build-arg branch=${env.BRANCH_NAME} --build-arg tag=${base_cpu_tag} -f ${dockerfile} .")
                                 // define additional docker_tag_cpu to mark it as "cpu" version
                                 docker_tag_cpu = (docker_tag == "latest") ? "cpu" : (docker_tag + "-cpu")
@@ -311,7 +311,7 @@ pipeline {
 
                             // check that in the built image (cpu or default), DEEPaaS API starts as expected
                             // EXCLUDE "cicd" branch
-                            // do it with only "cpu|default" image: 
+                            // do it with only "cpu|default" image:
                             // a) can stop before proceeding with "gpu" version b) "gpu" may fail without GPU hardware anyway
                             if (env.BRANCH_NAME != 'cicd') {
                                 sh "rm -rf ai4os-hub-check-artifact"
@@ -378,7 +378,7 @@ pipeline {
                     PAPI_REFRESH_URL = "${AI4OS_PAPI_URL}/v1/catalog/modules/${REPO_NAME}/refresh"
                     // have to use "'" to avoid injection of credentials
                     // see https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
-                    CURL_PAPI_CALL = "curl -si -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " + 
+                    CURL_PAPI_CALL = "curl -si -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " +
                         '-H "Authorization: Bearer $AI4OS_PAPI_SECRET"'
                     response = sh (returnStdout: true, script: CURL_PAPI_CALL).trim()
                     status_code = sh (returnStdout: true, script: "echo '${response}' |grep HTTP | awk '{print \$2}'").trim().toInteger()
@@ -392,10 +392,10 @@ pipeline {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
             }
-            agent {                 
+            agent {
                 docker {
                     image 'ai4oshub/ci-images:python3.12'
-                }                
+                }
             }
             environment {
                 OSCAR_SERVICE_TOKEN = credentials('oscar-service-token')
@@ -408,12 +408,79 @@ pipeline {
                             git branch: "master",
                             url: 'https://github.com/ai4os/ai4os-hub-qa'
                         }
-    
+
                         sh "./_ai4os-hub-qa/scripts/oscar_update.py"
                     }
                 }
             }
         }
+
+        stage("Rebuild provenance") {
+            when {
+                expression {env.MODULES.contains(env.REPO_URL)}
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                    branch 'release/*'
+                    triggeredBy 'UserIdCause'
+                }
+            }
+            environment {
+                // Credentials have to be set in Jenkins
+                PROVENANCE_TOKEN = credentials('provenance-token')
+                MLFLOW = credentials('mlflow-readonly')
+            }
+            steps {
+                script {
+
+                    // build PROVENANCE route to refresh the module
+                    withFolderProperties {
+                        // retrieve PROVENANCE_URL and remove trailing slash "/"
+                        PROVENANCE_URL = "${env.AI4OS_PROVENANCE_URL.endsWith("/") ? env.AI4OS_PROVENANCE_URL[0..-2] : env.AI4OS_PROVENANCE_URL}"
+                    }
+                    PROVENANCE_REFRESH_URL = "${PROVENANCE_URL}/metadata"
+
+                    // We have to use "'" to avoid injection of credentials [1]
+                    // [1]: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
+
+                    // In order for variable expansion to happen in bash, the string has
+                    // to be enclosed in double quotes. So to be able to expand MLFLOW_PWD
+                    // we have to wrap data with double quotes (--data "...").
+                    // But JSON also need double quotes, so we have to escape them.
+                    // That's why the data section looks a bit funky with the \\\"
+                    CURL_PROVENANCE_CALL = "curl -i " +
+                        "-X POST '${PROVENANCE_REFRESH_URL}' " +
+                        '-H "X-API-KEY: $PROVENANCE_TOKEN" ' +
+                        "-H 'Content-Type: application/json' " +
+                        "--data \"" +
+                        "{" +
+                        "    \\\"sources\\\": {" +
+                        "      \\\"applicationId\\\": \\\"${REPO_NAME}\\\"," +
+                        "      \\\"jenkinsWorkflow\\\": {" +
+                        "         \\\"name\\\": \\\"${REPO_NAME}\\\"," +
+                        "         \\\"group\\\": \\\"AI4OS-hub\\\"," +
+                        "         \\\"branch\\\": \\\"${BRANCH_NAME}\\\"," +
+                        "         \\\"build\\\": ${BUILD_NUMBER}" +
+                        "      }" +
+                        "    }," +
+                        "    \\\"credentials\\\": {" +
+                        "      \\\"mlflow\\\": {" +
+                        "         \\\"username\\\": \\\"${MLFLOW_USR}\\\"," +
+                        "         \\\"password\\\": \\\"" + '$MLFLOW_PSW' + "\\\"" +
+                        "      }" +
+                        "    }" +
+                        "}" +
+                        "\""
+
+                    response = sh (returnStdout: true, script: CURL_PROVENANCE_CALL).trim()
+                    status_code = sh (returnStdout: true, script: "echo '${response}' |grep HTTP | awk '{print \$2}'").trim().toInteger()
+                    if (status_code != 200 && status_code != 201) {
+                        error("Returned status code = $status_code when calling $PROVENANCE_REFRESH_URL")
+                    }
+                }
+            }
+        }
+
     }
     post {
         // Clean after build
@@ -427,4 +494,3 @@ pipeline {
         }
     }
 }
-
