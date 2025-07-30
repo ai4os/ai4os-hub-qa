@@ -27,7 +27,7 @@ pipeline {
         stage('Metadata: AI4OS QA stage') {
             parallel {
 
-                stage('Metadata: V2 validation (YAML)') {
+                stage('Metadata: metadata V2 validation (YAML)') {
                     agent {
                         docker {
                             image 'ai4oshub/ci-images:python3.12'
@@ -45,7 +45,7 @@ pipeline {
                     }
                 }
 
-                stage("Metadata: License validation") {
+                stage("Metadata: license validation") {
                     steps {
                         script {
                             // Check if LICENSE file is present in the repository
@@ -58,7 +58,7 @@ pipeline {
             }
         }
 
-        stage("Metadata: Check if only metadata files have changed") {
+        stage("Check: if only metadata files have changed") {
             steps {
                 script {
                     // Check if only metadata files have been changed
@@ -115,7 +115,7 @@ pipeline {
         }
 
         // Let's run user tests for all repos
-        stage("Tests: User-defined module pipeline job") {
+        stage("Tests: user-defined module tests") {
             when {
                 anyOf {
                     expression {need_build}
@@ -149,7 +149,7 @@ pipeline {
             }
 
             stages {
-                stage("Docker: Variable initialization") {
+                stage("Docker: variable initialization") {
                     environment {
                         AI4OS_REGISTRY_CREDENTIALS = credentials('AIOS-registry-credentials')
                     }
@@ -168,7 +168,7 @@ pipeline {
                     }
                 }
 
-                stage('Docker: AI4OS Hub images build') {
+                stage('Docker: images build') {
                     steps {
                         checkout scm
 
@@ -270,7 +270,7 @@ pipeline {
                     }
                 }
 
-                stage('Docker: AI4OS Hub delivery to registry') {
+                stage('Docker: delivery to registry') {
                     when {
                         expression {docker_ids.size() > 0}
                     }
@@ -287,7 +287,7 @@ pipeline {
             }
         }
 
-        stage('Zenodo: Integration stage') {
+        stage('Zenodo: integration stage') {
             when {
                 expression {env.MODULES.contains(env.THIS_REPO)}
             }
@@ -296,7 +296,7 @@ pipeline {
             }
 
             stages {
-                stage('Zenodo: Enable Github integration') {
+                stage('Zenodo: enable Github integration') {
                     steps {
                         checkout scm
                         script {
@@ -333,7 +333,7 @@ pipeline {
                     }
                 }
 
-                stage('Zenodo: Trigger webhook on first integration') {
+                stage('Zenodo: trigger webhook on first integration') {
                     when {
                         expression {need_zenodo_retrigger}
                     }
@@ -390,7 +390,7 @@ pipeline {
                     }
                 }
 
-                stage('Zenodo: Get DOI') {
+                stage('Zenodo: get DOI') {
                     when {
                         expression {need_zenodo_retrigger}
                     }
@@ -415,7 +415,7 @@ pipeline {
                     }
                 }
 
-                stage('Zenodo: Update metadata files') {
+                stage('Zenodo: update metadata files') {
                     when {
                         expression {need_zenodo_retrigger}
                         expression {zenodo_doi}
@@ -532,7 +532,7 @@ pipeline {
             }
         }
 
-        stage("Catalog: Trigger cache refresh") {
+        stage("Catalog: trigger cache refresh") {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
                 anyOf {
@@ -569,7 +569,7 @@ pipeline {
             }
         }
 
-        stage('OSCAR: Update services') {
+        stage('OSCAR: update services') {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
             }
@@ -596,7 +596,7 @@ pipeline {
             }
         }
 
-        stage("Rebuild provenance") {
+        stage("Provenance: update database") {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
                 anyOf {
