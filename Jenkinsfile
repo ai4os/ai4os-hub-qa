@@ -20,61 +20,14 @@ pipeline {
         // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
         MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
-        METADATA_FILE = "metadata.json"
+        METADATA_FILE = "ai4-metadata.yml"
     }
 
     stages {
         stage('Metadata tests') {
             parallel {
-                stage('AI4OS Hub metadata V1 validation') {
-                    when {
-                        // all repos suppose to have ai4-metadata.yml,
-                        // metadata.json is not mandatory vk@250219
-                        expression {fileExists("metadata.json")}
-                    }
-                    agent {
-                        docker {
-                            image 'ai4oshub/ci-images:python3.12'
-                        }
-                    }
-                    steps {
-                        script {
-                            env.METADATA_FILE = "metadata.json"
-                            sh "ai4-metadata validate --metadata-version 1.0.0 metadata.json"
-                        }
-                    }
-                }
-                stage('AI4OS Hub metadata V2 validation (JSON)') {
-                    when {
-                        // Check if ai4-metadata.json is present in the repository
-                        expression {fileExists("ai4-metadata.json")}
-                    }
-                    agent {
-                        docker {
-                            image 'ai4oshub/ci-images:python3.12'
-                        }
-                    }
-                    steps {
-                        script {
-                            // Check if metadata files are present in the repository
-                            if (!fileExists("ai4-metadata.json")) {
-                                error("ai4-metadata.json file not found in the repository")
-                            }
-                            if (fileExists("ai4-metadata.yml")) {
-                                error("Both ai4-metadata.json and ai4-metadata.yml files found in the repository")
-                            }
-                            env.METADATA_FILE = "ai4-metadata.json"
-                        }
-                        script {
-                            sh "ai4-metadata validate --metadata-version 2.0.0 ai4-metadata.json"
-                        }
-                    }
-                }
+
                 stage('AI4OS Hub metadata V2 validation (YAML)') {
-                    when {
-                        // Check if ai4-metadata.yml is present in the repository
-                        expression {fileExists("ai4-metadata.yml")}
-                    }
                     agent {
                         docker {
                             image 'ai4oshub/ci-images:python3.12'
@@ -82,17 +35,12 @@ pipeline {
                     }
                     steps {
                         script {
-                            if (!fileExists("ai4-metadata.yml")) {
-                                error("ai4-metadata.yml file not found in the repository")
-                            }
-                            if (fileExists("ai4-metadata.json")) {
-                                error("Both ai4-metadata.json and ai4-metadata.yml files found in the repository")
+                            if (!fileExists(env.METADATA_FILE)) {
+                                error("${env.METADATA_FILE} file not found in the repository")
                             }
                         }
                         script {
-                            env.METADATA_FILE = "ai4-metadata.yml"
-                            println("[INFO] Using ${env.METADATA_FILE} metadata file")
-                            sh "ai4-metadata validate --metadata-version 2.0.0 ai4-metadata.yml"
+                            sh "ai4-metadata validate --metadata-version 2.0.0 ${env.METADATA_FILE}"
                         }
                     }
                 }
@@ -109,7 +57,7 @@ pipeline {
             }
         }
 
-        stage("Check if only metadata files have changed") {
+        stage("Check if only metadata file has changed") {
             steps {
                 script {
                     // Check if only metadata files have been changed
@@ -152,10 +100,10 @@ pipeline {
                     // we need to check if the metadata files are present in the list of changed files
 
                     // Check if metadata files are present in the list of changed files
-                    if (changed_files.contains("metadata.json") || changed_files.contains("ai4-metadata.json") || changed_files.contains("ai4-metadata.yml")) {
+                    if (changed_files.contains(env.METADATA_FILE)) {
                         // Convert to an array and pop items
                         changed_files = changed_files.tokenize()
-                        changed_files.removeAll(["metadata.json", "ai4-metadata.json", "ai4-metadata.yml"])
+                        changed_files.removeAll([env.METADATA_FILE])
                         // now check if the list is empty
                         if (changed_files.size() == 0) {
                             need_build = false
@@ -237,24 +185,10 @@ pipeline {
                             }
                             docker_tag = docker_tag.toLowerCase()
 
-                            println("[INFO] (2) Using ${env.METADATA_FILE} metadata file")
                             image_name = env.REPO_NAME
                             // get docker image name from ai4-metadata.yml
-                            //if (env.METADATA_FILE == "ai4-metadata.yml") {
-                                //meta = readYAML file: env.METADATA_FILE
-                                //image_name = meta["links"]["docker_image"].split("/")[1]
-                            //}
-
-                            // get docker image name from metadata.json
-                            if (env.METADATA_FILE == "metadata.json" && fileExists("metadata.json")) {
-                                meta = readJSON file: env.METADATA_FILE
-                                image_name = meta["sources"]["docker_registry_repo"].split("/")[1]
-                            }
-                            // get docker image name from ai4-metadata.json
-                            if (env.METADATA_FILE == "ai4-metadata.json" && fileExists("ai4-metadata.json")) {
-                                meta = readJSON file: env.METADATA_FILE
-                                image_name = meta["links"]["docker_image"].split("/")[1]
-                            }
+                            //meta = readYAML file: env.METADATA_FILE
+                            //image_name = meta["links"]["docker_image"].split("/")[1]
 
                             // use preconfigured in Jenkins docker_repository
                             // XXX may confuse users? (e.g. expect xyz/myimage, but we push to ai4hub/myimage)
