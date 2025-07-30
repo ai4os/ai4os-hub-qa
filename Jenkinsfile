@@ -15,20 +15,19 @@ pipeline {
     environment {
         // Remove .git from the GIT_URL link
         REPO_URL = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
+        REPO_NAME = "${REPO_URL.tokenize('/')[-1]}"
+        SQA_CONTAINER_NAME = "${env.BUILD_TAG.replace('/','-').replace('\\','-')}"
         // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
         MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
-        METADATA_FILE = "metadata.json"
+        METADATA_FILE = "ai4-metadata.yml"
     }
 
     stages {
         stage('Metadata: AI4OS QA stage') {
             parallel {
 
-                stage('Metadata: AI4OS Hub metadata V1 validation') {
-                    when {
-                        expression {env.MODULES.contains(env.REPO_URL)}
-                    }
+                stage('Metadata: V2 validation (YAML)') {
                     agent {
                         docker {
                             image 'ai4oshub/ci-images:python3.12'
@@ -36,73 +35,16 @@ pipeline {
                     }
                     steps {
                         script {
-                            // Check if .metadata.json is present in the repository
-                            if (!fileExists("metadata.json")) {
-                                error("metadata.json file not found in the repository")
+                            if (!fileExists(env.METADATA_FILE)) {
+                                error("${env.METADATA_FILE} file not found in the repository")
                             }
-                            env.METADATA_FILE = "metadata.json"
                         }
-
                         script {
-                            sh "ai4-metadata validate --metadata-version 1.0.0 metadata.json"
+                            sh "ai4-metadata validate --metadata-version 2.0.0 ${env.METADATA_FILE}"
                         }
                     }
                 }
 
-                stage('Metadata: AI4OS Hub metadata V2 validation (JSON)') {
-                    when {
-                        expression {env.MODULES.contains(env.REPO_URL)}
-                        // Check if metadata.json is present in the repository
-                        expression {fileExists("ai4-metadata.json")}
-                    }
-                    agent {
-                        docker {
-                            image 'ai4oshub/ci-images:python3.12'
-                        }
-                    }
-                    steps {
-                        script {
-                            // Check if metadata files are present in the repository
-                            if (!fileExists("ai4-metadata.json")) {
-                                error("ai4-metadata.json file not found in the repository")
-                            }
-                            if (fileExists("ai4-metadata.yml")) {
-                                error("Both ai4-metadata.json and ai4-metadata.yml files found in the repository")
-                            }
-                            env.METADATA_FILE = "ai4-metadata.json"
-                        }
-                        script {
-                            sh "ai4-metadata validate --metadata-version 2.0.0 ai4-metadata.json"
-                        }
-                    }
-                }
-
-                stage('Metadata: AI4OS Hub metadata V2 validation (YAML)') {
-                    when {
-                        expression {env.MODULES.contains(env.REPO_URL)}
-                        // Check if metadata.json is present in the repository
-                        expression {fileExists("ai4-metadata.yml")}
-                    }
-                    agent {                 
-                        docker {
-                            image 'ai4oshub/ci-images:python3.12'
-                        }
-                    }
-                    steps {
-                        script {
-                            if (!fileExists("ai4-metadata.yml")) {
-                                error("ai4-metadata.yml file not found in the repository")
-                            }
-                            if (fileExists("ai4-metadata.json")) {
-                                error("Both ai4-metadata.json and ai4-metadata.yml files found in the repository")
-                            }
-                        }
-                        script {
-                            sh "ai4-metadata validate --metadata-version 2.0.0 ai4-metadata.yml"
-                        }
-                    }
-                }
-                
                 stage("Metadata: License validation") {
                     steps {
                         script {
@@ -128,25 +70,41 @@ pipeline {
                     // If GIT_PREVIOUS_SUCCESSFUL_COMMIT fails
                     // (e.g. First time build, commits were rewritten by user),
                     // we fallback to last commit
+
+                    need_build = true
+                    changed_files = ""
+
                     try {
                         changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
-                    } catch (err) {
-                        println("[WARNING] Exception: ${err}")
+                    } catch (Exception exa) {
+                        println("[WARNING] Exception: " + exa.toString())
                         println("[INFO] Considering changes only in the last commit..")
-                        changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
+                        try {
+                            changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
+                        } catch (Exception exb) {
+                            println("[WARNING] Exception: " + exb.toString())
+                            // check if we deal with the initial commit / first commit
+                            repo_commits = sh (returnStdout: true, script: "git rev-list HEAD --count").trim()
+                            if (repo_commits.toInteger() == 1) {
+                                println("============================ [WARNING] ============================")
+                                println(" It seems this is your FIRST / INITIAL commit")
+                                println(" We run only basic tests. Please, consider further updating the code")
+                                println("============================ [WARNING] ============================")
+                                changed_files = ""
+                                need_build = false
+                            }
+                        }
                     }
 
                     // we need to check here if the change only affects any of the metadata files, but not the code
                     // we can't use "git diff --name-only HEAD^ HEAD" as it will return all files changed in the commit
                     // we need to check if the metadata files are present in the list of changed files
 
-                    need_build = true
-
                     // Check if metadata files are present in the list of changed files
-                    if (changed_files.contains("metadata.json") || changed_files.contains("ai4-metadata.json") || changed_files.contains("ai4-metadata.yml")) {
+                    if (changed_files.contains(env.METADATA_FILE)) {
                         // Convert to an array and pop items
                         changed_files = changed_files.tokenize()
-                        changed_files.removeAll(["metadata.json", "ai4-metadata.json", "ai4-metadata.yml"])
+                        changed_files.removeAll([env.METADATA_FILE])
                         // now check if the list is empty
                         if (changed_files.size() == 0) {
                             need_build = false
@@ -167,7 +125,7 @@ pipeline {
             steps {
                 //sh 'printenv'
                 script {
-                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10))
+                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10), parameters: [string(name: 'SQA_CONTAINER_NAME', value: "${env.SQA_CONTAINER_NAME}")])
                 }
             }
         }
@@ -227,13 +185,10 @@ pipeline {
                             }
                             docker_tag = docker_tag.toLowerCase()
 
-                            // get docker image name from metadata.json / ai4-metadata.json
-                            meta = readJSON file: env.METADATA_FILE
-                            if (env.METADATA_FILE == "metadata.json") {
-                                image_name = meta["sources"]["docker_registry_repo"].split("/")[1] 
-                            } else {
-                                image_name = meta["links"]["docker_image"].split("/")[1]
-                            }
+                            image_name = env.REPO_NAME
+                            // get docker image name from ai4-metadata.yml
+                            //meta = readYAML file: env.METADATA_FILE
+                            //image_name = meta["links"]["docker_image"].split("/")[1]
 
                             // use preconfigured in Jenkins docker_repository
                             // XXX may confuse users? (e.g. expect xyz/myimage, but we push to ai4hub/myimage)
@@ -274,12 +229,12 @@ pipeline {
                                 // if $jenkinsconstants_file not found or one of base_cpu|gpu_tag is not defined or none of them, build docker image with default params
                                 println("[WARNING] Exception: ${err}")
                                 println("[INFO] Using default parameters for Docker image building. Using ${env.BRANCH_NAME} branch")
-                                image_id = docker.build(image, 
+                                image_id = docker.build(image,
                                                         "--no-cache --force-rm --build-arg branch=${env.BRANCH_NAME} -f ${dockerfile} .")
                             }
                             // build "-cpu" image, if configured
                             if (build_cpu_tag) {
-                                image_id = docker.build(image, 
+                                image_id = docker.build(image,
                                                         "--no-cache --force-rm --build-arg branch=${env.BRANCH_NAME} --build-arg tag=${base_cpu_tag} -f ${dockerfile} .")
                                 // define additional docker_tag_cpu to mark it as "cpu" version
                                 docker_tag_cpu = (docker_tag == "latest") ? "cpu" : (docker_tag + "-cpu")
@@ -290,7 +245,7 @@ pipeline {
 
                             // check that in the built image (cpu or default), DEEPaaS API starts as expected
                             // EXCLUDE "cicd" branch
-                            // do it with only "cpu|default" image: 
+                            // do it with only "cpu|default" image:
                             // a) can stop before proceeding with "gpu" version b) "gpu" may fail without GPU hardware anyway
                             if (env.BRANCH_NAME != 'cicd') {
                                 sh "rm -rf ai4os-hub-check-artifact"
@@ -413,11 +368,11 @@ pipeline {
                                        url: "${github_api_url}/releases"
                             releases = readJSON text: releases.content
 
-                            // Uncomment this to retrigger all releases in reverse order, 
+                            // Uncomment this to retrigger all releases in reverse order,
                             // and comment the next line
                             // releases = releases.reverse()
                             // Sync only the last release
-                            releases = [releases[0]] 
+                            releases = [releases[0]]
 
                             for (release in releases) {
                                 println("Retriggering release: ${release.tag_name}")
@@ -466,14 +421,14 @@ pipeline {
                         expression {zenodo_doi}
                     }
                     environment {
-                        GITHUB_TOKEN = credentials('github-ai4os-hub')  
+                        GITHUB_TOKEN = credentials('github-ai4os-hub')
                     }
                     steps {
                         script {
                             // Checkout the repository
                             checkout scm
 
-                            // Create a new branch, using shell, append a random suffix 
+                            // Create a new branch, using shell, append a random suffix
                             sh "git checkout -b zenodo-integration-${BUILD_NUMBER}"
 
                             // V1 metadata
@@ -600,10 +555,10 @@ pipeline {
                         // retrieve PAPI_URL and remove trailing slash "/" (AI4OS_PAPI_URL is set in Jenkins)
                         AI4OS_PAPI_URL = "${env.AI4OS_PAPI_URL.endsWith("/") ? env.AI4OS_PAPI_URL[0..-2] : env.AI4OS_PAPI_URL}"
                     }
-                    PAPI_REFRESH_URL = "${AI4OS_PAPI_URL}/v1/catalog/modules/${REPO_NAME}/refresh"
+                    PAPI_REFRESH_URL = "${AI4OS_PAPI_URL}/v1/catalog/modules/refresh?item_name=${REPO_NAME}"
                     // have to use "'" to avoid injection of credentials
                     // see https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
-                    CURL_PAPI_CALL = "curl -si -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " + 
+                    CURL_PAPI_CALL = "curl -si -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " +
                         '-H "Authorization: Bearer $AI4OS_PAPI_SECRET"'
                     response = sh (returnStdout: true, script: CURL_PAPI_CALL).trim()
                     status_code = sh (returnStdout: true, script: "echo '${response}' |grep HTTP | awk '{print \$2}'").trim().toInteger()
@@ -640,6 +595,73 @@ pipeline {
                 }
             }
         }
+
+        stage("Rebuild provenance") {
+            when {
+                expression {env.MODULES.contains(env.REPO_URL)}
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                    branch 'release/*'
+                    triggeredBy 'UserIdCause'
+                }
+            }
+            environment {
+                // Credentials have to be set in Jenkins
+                PROVENANCE_TOKEN = credentials('provenance-token')
+                MLFLOW = credentials('mlflow-readonly')
+            }
+            steps {
+                script {
+
+                    // build PROVENANCE route to refresh the module
+                    withFolderProperties {
+                        // retrieve PROVENANCE_URL and remove trailing slash "/"
+                        PROVENANCE_URL = "${env.AI4OS_PROVENANCE_URL.endsWith("/") ? env.AI4OS_PROVENANCE_URL[0..-2] : env.AI4OS_PROVENANCE_URL}"
+                    }
+                    PROVENANCE_REFRESH_URL = "${PROVENANCE_URL}/metadata"
+
+                    // We have to use "'" to avoid injection of credentials [1]
+                    // [1]: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
+
+                    // In order for variable expansion to happen in bash, the string has
+                    // to be enclosed in double quotes. So to be able to expand MLFLOW_PWD
+                    // we have to wrap data with double quotes (--data "...").
+                    // But JSON also need double quotes, so we have to escape them.
+                    // That's why the data section looks a bit funky with the \\\"
+                    CURL_PROVENANCE_CALL = "curl -i " +
+                        "-X POST '${PROVENANCE_REFRESH_URL}' " +
+                        '-H "X-API-KEY: $PROVENANCE_TOKEN" ' +
+                        "-H 'Content-Type: application/json' " +
+                        "--data \"" +
+                        "{" +
+                        "    \\\"sources\\\": {" +
+                        "      \\\"applicationId\\\": \\\"${REPO_NAME}\\\"," +
+                        "      \\\"jenkinsWorkflow\\\": {" +
+                        "         \\\"name\\\": \\\"${REPO_NAME}\\\"," +
+                        "         \\\"group\\\": \\\"AI4OS-hub\\\"," +
+                        "         \\\"branch\\\": \\\"${BRANCH_NAME}\\\"," +
+                        "         \\\"build\\\": ${BUILD_NUMBER}" +
+                        "      }" +
+                        "    }," +
+                        "    \\\"credentials\\\": {" +
+                        "      \\\"mlflow\\\": {" +
+                        "         \\\"username\\\": \\\"${MLFLOW_USR}\\\"," +
+                        "         \\\"password\\\": \\\"" + '$MLFLOW_PSW' + "\\\"" +
+                        "      }" +
+                        "    }" +
+                        "}" +
+                        "\""
+
+                    response = sh (returnStdout: true, script: CURL_PROVENANCE_CALL).trim()
+                    status_code = sh (returnStdout: true, script: "echo '${response}' |grep HTTP | awk '{print \$2}'").trim().toInteger()
+                    if (status_code != 200 && status_code != 201) {
+                        error("Returned status code = $status_code when calling $PROVENANCE_REFRESH_URL")
+                    }
+                }
+            }
+        }
+
     }
     post {
         // Clean after build
