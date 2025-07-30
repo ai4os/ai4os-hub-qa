@@ -431,15 +431,15 @@ pipeline {
                             // Create a new branch, using shell, append a random suffix
                             sh "git checkout -b zenodo-integration-${BUILD_NUMBER}"
 
-                            // V1 metadata
-                            meta = readJSON file: "metadata.json"
-
                             // Setup git user
                             sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
                             sh "git config --global user.name 'AI4EOSC Jenkins user'"
 
-                            // V1 metadata
-                            // If Zenodo DOI is not in metadata.json, add it
+
+                            // V2 metadata
+                            meta = readYaml file: env.METADATA_FILE
+
+                            // If Zenodo DOI is not in metadata, add it
                             if (!meta["sources"].containsKey("zenodo_doi")) {
                                 meta["sources"]["zenodo_doi"] = zenodo_doi
 
@@ -447,48 +447,9 @@ pipeline {
                                     meta["doi"] = zenodo_doi.split("/")[-2] + "/" + zenodo_doi.split("/")[-1]
                                 }
 
-                                writeJSON file: "metadata.json", json: meta, pretty: 4
+                                writeYaml file: env.METADATA_FILE, data: meta, pretty: 4
 
-                                sh "git add metadata.json"
-                            }
-
-                            // V2 metadata
-                            // Check if ai4-metadata.json exists
-                            if (fileExists("ai4-metadata.json")) {
-                                meta = readJSON file: "ai4-metadata.json"
-
-                                // If Zenodo DOI is not in metadata.json, add it
-                                if (!meta["sources"].containsKey("zenodo_doi")) {
-                                    meta["sources"]["zenodo_doi"] = zenodo_doi
-
-                                    if (!meta.containsKey("doi")) {
-                                        meta["doi"] = zenodo_doi.split("/")[-2] + "/" + zenodo_doi.split("/")[-1]
-                                    }
-
-                                    writeJSON file: "ai4-metadata.json", json: meta, pretty: 4
-
-                                    sh "git add ai4-metadata.json"
-                                }
-
-                            }
-
-                            // Check if ai4-metadata.yml exists
-                            if (fileExists("ai4-metadata.yml")) {
-                                meta = readYaml file: "ai4-metadata.yml"
-
-                                // If Zenodo DOI is not in metadata.yml, add it
-
-                                if (!meta["sources"].containsKey("zenodo_doi")) {
-                                    meta["sources"]["zenodo_doi"] = zenodo_doi
-
-                                    if (!meta.containsKey("doi")) {
-                                        meta["doi"] = zenodo_doi.split("/")[-2] + "/" + zenodo_doi.split("/")[-1]
-                                    }
-
-                                    writeYaml file: "ai4-metadata.yml", data: meta, pretty: 4
-
-                                    sh "git add ai4-metadata.yml"
-                                }
+                                sh "git add ${env.METADATA_FILE}"
                             }
 
                             sh "git commit -m 'Add Zenodo DOI to metadata file(s)'"
@@ -506,10 +467,9 @@ pipeline {
                             response = readJSON text: response.content
                             default_branch = response["default_branch"]
 
-
-                            // Now, crete a PR using GitHub API
+                            // Now, create a PR using GitHub API
                             pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata file(s). The obtained Zenodo DOI is ${zenodo_doi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
-                            pr_title = "Add Zenodo DOI to metadata.json"
+                            pr_title = "Add Zenodo DOI to metadata"
                             pr_head = "zenodo-integration-${BUILD_NUMBER}"
                             pr = """{
                                 "title": "${pr_title}",
