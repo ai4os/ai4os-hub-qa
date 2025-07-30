@@ -289,7 +289,7 @@ pipeline {
 
         stage('Zenodo: integration stage') {
             when {
-                expression {env.MODULES.contains(env.THIS_REPO)}
+                expression {env.MODULES.contains(env.REPO_URL)}
             }
             environment {
                 ZENODO_TOKEN = credentials('zenodo')
@@ -305,7 +305,7 @@ pipeline {
                                 zenodo_community = env.ZENODO_COMMUNITY
                             }
                             // Get repository ID from GitHub API
-                            github_api_url = env.THIS_REPO.replace("github.com", "api.github.com/repos")
+                            github_api_url = env.REPO_URL.replace("github.com", "api.github.com/repos")
                             // Get repository ID from GitHub API
                             repo_id = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
                             // Get webhook URL form GitHub API
@@ -401,7 +401,7 @@ pipeline {
                                 zenodo_api_url = env.ZENODO_API_URL
                                 zenodo_community = env.ZENODO_COMMUNITY
                             }
-                            query = "type:software%20AND ${env.THIS_REPO}"
+                            query = "type:software%20AND ${env.REPO_URL}"
                             query = URLEncoder.encode(query, "UTF-8")
 
                             // Search for Zenodo record in Zenodo API
