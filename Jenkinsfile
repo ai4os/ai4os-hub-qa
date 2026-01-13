@@ -447,11 +447,11 @@ pipeline {
                             if (meta["links"] == null) {
                                 meta["links"] = [:]
                             }
-                            
+
                             // If Zenodo DOI is not in metadata, add it
                             if (!meta["links"].containsKey("zenodo_doi")) {
                                 meta["links"]["zenodo_doi"] = zenodo_doi
-                                
+
                                 // If metadata already contains a DOI, do not
                                 // set it, as the user might have included it
                                 // on their own.
