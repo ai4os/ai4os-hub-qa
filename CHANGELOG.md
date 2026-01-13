@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/ai4os/ai4os-hub-qa/compare/v1.3.1...v1.3.2) (2026-01-13)
+
+
+### Bug Fixes
+
+* use prettyPrint when writing YAML ([5d0e26c](https://github.com/ai4os/ai4os-hub-qa/commit/5d0e26cddd1369e4bdc6a580faa0056ecdad0e5b))
+
 ## [1.3.1](https://github.com/ai4os/ai4os-hub-qa/compare/v1.3.0...v1.3.1) (2026-01-13)
 
 
