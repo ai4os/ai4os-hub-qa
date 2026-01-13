@@ -460,7 +460,7 @@ pipeline {
                                     meta["doi"] = zenodoParts[zenodoParts.length - 2] + "/" + zenodoParts[zenodoParts.length - 1]
                                 }
 
-                                writeYaml file: env.METADATA_FILE, data: meta, pretty: 4
+                                writeYaml file: env.METADATA_FILE, data: meta, overwrite: true, prettyPrint: 4
                                 sh "git add ${env.METADATA_FILE}"
                             }
 
