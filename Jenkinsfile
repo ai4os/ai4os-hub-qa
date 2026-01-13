@@ -394,10 +394,7 @@ pipeline {
                     }
                 }
 
-                stage('Zenodo: get DOI') {
-                    when {
-                        expression {need_zenodo_retrigger}
-                    }
+                stage('Zenodo: get Zenodo DOI') {
                     steps {
                         checkout scm
                         script {
@@ -425,9 +422,8 @@ pipeline {
                     }
                 }
 
-                stage('Zenodo: update metadata files') {
+                stage('Zenodo: update metadata files with Zenodo DOI') {
                     when {
-                        expression {need_zenodo_retrigger}
                         expression {zenodo_doi}
                     }
                     environment {
@@ -448,17 +444,23 @@ pipeline {
                             // V2 metadata
                             meta = readYaml file: env.METADATA_FILE
 
+                            if (meta["links"] == null) {
+                                meta["links"] = [:]
+                            }
+                            
                             // If Zenodo DOI is not in metadata, add it
-                            if (!meta["sources"].containsKey("zenodo_doi")) {
-                                meta["sources"]["zenodo_doi"] = zenodo_doi
-
+                            if (!meta["links"].containsKey("zenodo_doi")) {
+                                meta["links"]["zenodo_doi"] = zenodo_doi
+                                
+                                // If metadata already contains a DOI, do not
+                                // set it, as the user might have included it
+                                // on their own.
                                 if (!meta.containsKey("doi")) {
                                     def zenodoParts = zenodo_doi.split("/")
                                     meta["doi"] = zenodoParts[zenodoParts.length - 2] + "/" + zenodoParts[zenodoParts.length - 1]
                                 }
 
                                 writeYaml file: env.METADATA_FILE, data: meta, pretty: 4
-
                                 sh "git add ${env.METADATA_FILE}"
                             }
 
