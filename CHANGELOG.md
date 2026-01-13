@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/ai4os/ai4os-hub-qa/compare/v1.3.0...v1.3.1) (2026-01-13)
+
+
+### Bug Fixes
+
+* use correct metadata path ([e682be4](https://github.com/ai4os/ai4os-hub-qa/commit/e682be40a2c4ca63a43e2155021dce82c72a2908))
+
 ## [1.3.0](https://github.com/ai4os/ai4os-hub-qa/compare/v1.2.0...v1.3.0) (2026-01-13)
 
 
