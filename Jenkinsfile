@@ -304,7 +304,6 @@ pipeline {
                                 zenodo_api_url = env.ZENODO_API_URL
                                 zenodo_community = env.ZENODO_COMMUNITY
                             }
-                            // Get repository ID from GitHub API
                             github_api_url = env.REPO_URL.replace("github.com", "api.github.com/repos")
                             // Get repository ID from GitHub API
                             repo_id = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
@@ -362,7 +361,7 @@ pipeline {
 
                             repository = sh (returnStdout: true, script: "curl -s ${github_api_url}").trim()
 
-                            // Get all relreases from GitHub API
+                            // Get all releases from GitHub API
                             releases = httpRequest authentication: 'github-ai4os-hub',
                                        httpMode: 'GET',
                                        url: "${github_api_url}/releases"
@@ -415,7 +414,13 @@ pipeline {
                                        url: "${zenodo_api_url}/records?size=1&q=${query}"
                             response = readJSON text: response.content
 
-                            zenodo_doi = response["hits"]["hits"][0]["links"]["parent_doi"]
+                            def hits = response?.hits?.hits
+                            if (hits && hits.size() > 0 && hits[0]?.links?.parent_doi) {
+                                zenodo_doi = hits[0].links.parent_doi
+                                echo "Found Zenodo DOI: ${zenodo_doi}"
+                            } else {
+                                echo "No Zenodo record found for query '${query}'. Skipping DOI update."
+                            }
                         }
                     }
                 }
@@ -440,7 +445,6 @@ pipeline {
                             sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
                             sh "git config --global user.name 'AI4EOSC Jenkins user'"
 
-
                             // V2 metadata
                             meta = readYaml file: env.METADATA_FILE
 
@@ -449,7 +453,8 @@ pipeline {
                                 meta["sources"]["zenodo_doi"] = zenodo_doi
 
                                 if (!meta.containsKey("doi")) {
-                                    meta["doi"] = zenodo_doi.split("/")[-2] + "/" + zenodo_doi.split("/")[-1]
+                                    def zenodoParts = zenodo_doi.split("/")
+                                    meta["doi"] = zenodoParts[zenodoParts.length - 2] + "/" + zenodoParts[zenodoParts.length - 1]
                                 }
 
                                 writeYaml file: env.METADATA_FILE, data: meta, pretty: 4
@@ -457,7 +462,7 @@ pipeline {
                                 sh "git add ${env.METADATA_FILE}"
                             }
 
-                            sh "git commit -m 'Add Zenodo DOI to metadata file(s)'"
+                            sh "git diff --cached --quiet || git commit -m 'Add Zenodo DOI to metadata file(s)'"
 
                             // Push the changes to the repository
                             withCredentials([
