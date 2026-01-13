@@ -371,8 +371,13 @@ pipeline {
                             // Uncomment this to retrigger all releases in reverse order,
                             // and comment the next line
                             // releases = releases.reverse()
-                            // Sync only the last release
-                            releases = [releases[0]]
+                            // Sync only the last release (if any releases exist)
+                            if (releases && releases.size() > 0) {
+                                releases = [releases[0]]
+                            } else {
+                                // No releases found; nothing to retrigger
+                                releases = []
+                            }
 
                             for (release in releases) {
                                 println("Retriggering release: ${release.tag_name}")
