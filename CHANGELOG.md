@@ -1,5 +1,56 @@
 # Changelog
 
+## [1.3.0](https://github.com/ai4os/ai4os-hub-qa/compare/v1.2.0...v1.3.0) (2026-01-13)
+
+
+### Features
+
+* add 'Update Catalog page' stage ([#20](https://github.com/ai4os/ai4os-hub-qa/issues/20)) ([2e69599](https://github.com/ai4os/ai4os-hub-qa/commit/2e6959976b8fac887a8c9a61561db3dfd60f8416))
+* Add check for the first commit ([6311f40](https://github.com/ai4os/ai4os-hub-qa/commit/6311f406b53bb79b75c7b66f4ee2714f113b473e))
+* add env variable SQA_CONTAINER_NAME to sanitize BUILD_TAG ([780f399](https://github.com/ai4os/ai4os-hub-qa/commit/780f399cbe0c08ec0c7d5007c4ee93a974f34287))
+* Add MIT License to the project ([552aaf5](https://github.com/ai4os/ai4os-hub-qa/commit/552aaf5cfee9c92771eabe97985824c974ee27cf))
+* add provenance rebuild trigger ([#22](https://github.com/ai4os/ai4os-hub-qa/issues/22)) ([7b6cf67](https://github.com/ai4os/ai4os-hub-qa/commit/7b6cf67565324c1e4833438eae3cebc80dd11b55))
+* add Zenodo DOI also to new metadata file if present ([ceab5d9](https://github.com/ai4os/ai4os-hub-qa/commit/ceab5d9cdbad3cfb97801511fe142664e9383021))
+* add Zenodo DOI to all metadata files ([99bff23](https://github.com/ai4os/ai4os-hub-qa/commit/99bff2371acdee7b2120cf9308ae7432bec2e044))
+* enable OSCAR notifications ([467fb26](https://github.com/ai4os/ai4os-hub-qa/commit/467fb26b5ff0f7ea9ea720ff53aa9a6caf0ab9eb))
+* get Zenodo DOI, modify metadata and create PR ([fec6046](https://github.com/ai4os/ai4os-hub-qa/commit/fec6046fcfd00fdeb30bf9f45f111a7b8ba71cfd))
+* initial Zenodo integration ([6e8d5de](https://github.com/ai4os/ai4os-hub-qa/commit/6e8d5dea5773f54a59affde53306336265071276))
+* make metadata check mandatory even if module is not in the catalog ([e0460ee](https://github.com/ai4os/ai4os-hub-qa/commit/e0460eecf780625d01c7c2514d46c5d89202bc6c))
+* remove support for old JSON metadata ([12d638f](https://github.com/ai4os/ai4os-hub-qa/commit/12d638f690774416f73b179f8ed88f2dcad7d93a))
+* trigger latest release sync on first Zenodo+GitHub integration ([8a7a175](https://github.com/ai4os/ai4os-hub-qa/commit/8a7a175568324e1744780734bc574947d63b3a9b))
+* update new PAPI refresh endpoint ([6aad905](https://github.com/ai4os/ai4os-hub-qa/commit/6aad9051782e500eeedcf6591efd178585d801e3))
+
+
+### Bug Fixes
+
+* cases when GIT_PREVIOUS_SUCCESSFUL_COMMIT fails ([798b9ef](https://github.com/ai4os/ai4os-hub-qa/commit/798b9efff75618ade164806d0040921b86b1d84c)), closes [#18](https://github.com/ai4os/ai4os-hub-qa/issues/18)
+* check for modified files with previous success commit ([#17](https://github.com/ai4os/ai4os-hub-qa/issues/17)) ([47c704f](https://github.com/ai4os/ai4os-hub-qa/commit/47c704fae05c72d9a451188b0784eac256e4e5b7))
+* check metadata.json only if present (not mandatory anymore) ([a16ae8a](https://github.com/ai4os/ai4os-hub-qa/commit/a16ae8a355440c601d2ef62002e702610a2eb0e5))
+* correct typo in PR message ([84d51ff](https://github.com/ai4os/ai4os-hub-qa/commit/84d51ff10ca1699e55e371e77f0e072c858fc9b0))
+* envar name ([4d3a27b](https://github.com/ai4os/ai4os-hub-qa/commit/4d3a27bc8259cca4ae16dbe2874ee7545c69fd74))
+* error handling for changed_files check ([146525e](https://github.com/ai4os/ai4os-hub-qa/commit/146525ef14483859beefe5044113c6f89a1ca8f8))
+* error handling for changed_files check ([d16590b](https://github.com/ai4os/ai4os-hub-qa/commit/d16590b25629ebf3867a6cfcd9a8ca53075e476e))
+* erroring in the changed_files check ([7d2d928](https://github.com/ai4os/ai4os-hub-qa/commit/7d2d928fdfd3a478f87b7a7a03bcdfb35ecaa1b2))
+* fetch master branch for OSCAR services ([64160ba](https://github.com/ai4os/ai4os-hub-qa/commit/64160bae27838cfde57e902f12469d02dcd62871))
+* fetch master branch for OSCAR services update ([5a00fca](https://github.com/ai4os/ai4os-hub-qa/commit/5a00fca377d04885e135a6ab93834864b17b117a))
+* how docker image name defined (temporary solution) ([325b993](https://github.com/ai4os/ai4os-hub-qa/commit/325b993fda15d97715c0ecf9252a73394ba6ea4e))
+* how docker image name defined (temporary solution) ([508cb72](https://github.com/ai4os/ai4os-hub-qa/commit/508cb72f81d37e7a2617085f00d34a367898686b))
+* improve Zenodo integration ([81d7e69](https://github.com/ai4os/ai4os-hub-qa/commit/81d7e69bc78d01a82b345cda8b0d48ee2e1461f9))
+* improve Zenodo integration ([5461463](https://github.com/ai4os/ai4os-hub-qa/commit/5461463d4112d8dac0f19d5a7c54f4016a7d4719))
+* pass SQA_CONTAINER_NAME to child job ([ef628c2](https://github.com/ai4os/ai4os-hub-qa/commit/ef628c23385db201171bddb11831e44e6fffb363))
+* prettify JSON ([9cf0c28](https://github.com/ai4os/ai4os-hub-qa/commit/9cf0c289e301865021bb9d7919ccdef63d83bdf1))
+* remove support for old JSON metadata ([5716c7e](https://github.com/ai4os/ai4os-hub-qa/commit/5716c7e334a7e095fead4705f6e31689f511158c))
+* rename stages, fix broken stages ([4c90d2c](https://github.com/ai4os/ai4os-hub-qa/commit/4c90d2c6543b6a0e813fb6988ad738c07b6b2dd0))
+* run OSCAR stage in Docker ([653eec3](https://github.com/ai4os/ai4os-hub-qa/commit/653eec323b120abeb65d92d56f5a99a65f0abbc7))
+* setup env vars for script with folder properties ([75c7511](https://github.com/ai4os/ai4os-hub-qa/commit/75c75116193f1540c96d5fdcb4eeb41d2e1c2826))
+* SQA_CONTAINER_NAME ([69a994d](https://github.com/ai4os/ai4os-hub-qa/commit/69a994d3cdf4104883857b35d1eacf56d36bfff4))
+* SQA_CONTAINER_NAME definition ([91ea9a5](https://github.com/ai4os/ai4os-hub-qa/commit/91ea9a5304fd78e31820fc3733558a13aa1af1e3))
+* stage name uniformity ([0a8b580](https://github.com/ai4os/ai4os-hub-qa/commit/0a8b580dad8c346f4524a150b300ccd8687042ca))
+* typo in Jenkinsfile ([2b9517b](https://github.com/ai4os/ai4os-hub-qa/commit/2b9517bd40494dd6f4c84b7810334c734c3c7fdb))
+* typo in Jenkinsfile ( ")" ) ([2b9517b](https://github.com/ai4os/ai4os-hub-qa/commit/2b9517bd40494dd6f4c84b7810334c734c3c7fdb))
+* use correct credentials ([a516f2a](https://github.com/ai4os/ai4os-hub-qa/commit/a516f2aa43d1c3dd2c0a3273f7c4b00c54f734b3))
+* use oscar-service-token credentials ([9a4cf8b](https://github.com/ai4os/ai4os-hub-qa/commit/9a4cf8b455d2bc30e4346954fda3da39e12e6f71))
+
 ## [1.2.0](https://github.com/ai4os/ai4os-hub-qa/compare/v1.1.0...v1.2.0) (2024-08-22)
 
 
