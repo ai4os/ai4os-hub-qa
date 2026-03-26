@@ -429,6 +429,9 @@ pipeline {
                 stage('Zenodo: update metadata files with Zenodo DOI') {
                     when {
                         expression {zenodo_doi}
+                        not {
+                            changeRequest()  // PR should not produce another PR
+                        }
                     }
                     environment {
                         GITHUB_TOKEN = credentials('github-ai4os-hub')
@@ -500,7 +503,7 @@ pipeline {
                                         httpMode: 'POST',
                                         url: "${github_api_url}/pulls",
                                         contentType: 'APPLICATION_JSON',
-                                        requestBody: pr
+                                        requestBody: JsonOutput.toJson(pr)
 
                                 println("PR created: ${response.content}")
                             } catch (err) {
@@ -552,6 +555,9 @@ pipeline {
         stage('OSCAR: update services') {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
+                not {
+                    changeRequest()  // don't trigger OSCAR update from PR
+                }                
             }
             agent {
                 docker {
