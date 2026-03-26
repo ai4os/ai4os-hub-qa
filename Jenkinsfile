@@ -125,6 +125,8 @@ pipeline {
             steps {
                 //sh 'printenv'
                 script {
+                    sh "docker compose version"
+                    sh "docker-compose version"
                     build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10), parameters: [string(name: 'SQA_CONTAINER_NAME', value: "${env.SQA_CONTAINER_NAME}")])
                 }
             }
