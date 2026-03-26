@@ -287,222 +287,226 @@ pipeline {
             }
         }
 
-        stage('Zenodo: integration stage') {
-            when {
-                expression {env.MODULES.contains(env.REPO_URL)}
-            }
-            environment {
-                ZENODO_TOKEN = credentials('zenodo')
-            }
+        // FIXME: Zenodo integration is misbehaving [1]
+        // Therefore we comment it until we find time to properly fix it.
+        // [1]: https://helpdesk.cloud.ai4eosc.eu/#ticket/zoom/36/209
 
-            stages {
-                stage('Zenodo: enable Github integration') {
-                    steps {
-                        checkout scm
-                        script {
-                            withFolderProperties{
-                                zenodo_api_url = env.ZENODO_API_URL
-                                zenodo_community = env.ZENODO_COMMUNITY
-                            }
-                            github_api_url = env.REPO_URL.replace("github.com", "api.github.com/repos")
-                            // Get repository ID from GitHub API
-                            repo_id = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
-                            // Get webhook URL form GitHub API
-                            response = httpRequest authentication: 'github-ai4os-hub',
-                                       httpMode: 'GET',
-                                       url: "${github_api_url}/hooks"
+        // stage('Zenodo: integration stage') {
+        //     when {
+        //         expression {env.MODULES.contains(env.REPO_URL)}
+        //     }
+        //     environment {
+        //         ZENODO_TOKEN = credentials('zenodo')
+        //     }
 
-                            content = readJSON text: response.content
+        //     stages {
+        //         stage('Zenodo: enable Github integration') {
+        //             steps {
+        //                 checkout scm
+        //                 script {
+        //                     withFolderProperties{
+        //                         zenodo_api_url = env.ZENODO_API_URL
+        //                         zenodo_community = env.ZENODO_COMMUNITY
+        //                     }
+        //                     github_api_url = env.REPO_URL.replace("github.com", "api.github.com/repos")
+        //                     // Get repository ID from GitHub API
+        //                     repo_id = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
+        //                     // Get webhook URL form GitHub API
+        //                     response = httpRequest authentication: 'github-ai4os-hub',
+        //                                httpMode: 'GET',
+        //                                url: "${github_api_url}/hooks"
 
-                            for (entry in content) {
-                                if (entry.config.url.startsWith(zenodo_api_url)) {
-                                    println("Zenodo webhook already enabled")
-                                    // If hook_url is defined, terminate the stage
-                                    need_zenodo_retrigger = false
-                                    return
-                                }
-                            }
+        //                     content = readJSON text: response.content
 
-                            need_zenodo_retrigger = true
-                            // Otherwise, enable Zenodo integration
-                            httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
-                                        httpMode: 'POST',
-                                        url: "${zenodo_api_url}user/github/repositories/${repo_id}/enable"
-                        }
-                    }
-                }
+        //                     for (entry in content) {
+        //                         if (entry.config.url.startsWith(zenodo_api_url)) {
+        //                             println("Zenodo webhook already enabled")
+        //                             // If hook_url is defined, terminate the stage
+        //                             need_zenodo_retrigger = false
+        //                             return
+        //                         }
+        //                     }
 
-                stage('Zenodo: trigger webhook on first integration') {
-                    when {
-                        expression {need_zenodo_retrigger}
-                    }
-                    steps {
-                        checkout scm
-                        script {
-                            withFolderProperties{
-                                zenodo_api_url = env.ZENODO_API_URL
-                                zenodo_community = env.ZENODO_COMMUNITY
-                            }
+        //                     need_zenodo_retrigger = true
+        //                     // Otherwise, enable Zenodo integration
+        //                     httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
+        //                                 httpMode: 'POST',
+        //                                 url: "${zenodo_api_url}user/github/repositories/${repo_id}/enable"
+        //                 }
+        //             }
+        //         }
 
-                            // Get webhook URL form GitHub API
-                            response = httpRequest authentication: 'github-ai4os-hub',
-                                       httpMode: 'GET',
-                                       url: "${github_api_url}/hooks"
+        //         stage('Zenodo: trigger webhook on first integration') {
+        //             when {
+        //                 expression {need_zenodo_retrigger}
+        //             }
+        //             steps {
+        //                 checkout scm
+        //                 script {
+        //                     withFolderProperties{
+        //                         zenodo_api_url = env.ZENODO_API_URL
+        //                         zenodo_community = env.ZENODO_COMMUNITY
+        //                     }
 
-                            content = readJSON text: response.content
+        //                     // Get webhook URL form GitHub API
+        //                     response = httpRequest authentication: 'github-ai4os-hub',
+        //                                httpMode: 'GET',
+        //                                url: "${github_api_url}/hooks"
 
-                            for (entry in content) {
-                                if (entry.config.url.startsWith(zenodo_api_url)) {
-                                    println("Zenodo webhook enabled")
-                                    hook_url = entry.config.url
-                                }
-                            }
-                            // Now, retrigger all releases to trigger Zenodo integration
+        //                     content = readJSON text: response.content
 
-                            repository = sh (returnStdout: true, script: "curl -s ${github_api_url}").trim()
+        //                     for (entry in content) {
+        //                         if (entry.config.url.startsWith(zenodo_api_url)) {
+        //                             println("Zenodo webhook enabled")
+        //                             hook_url = entry.config.url
+        //                         }
+        //                     }
+        //                     // Now, retrigger all releases to trigger Zenodo integration
 
-                            // Get all releases from GitHub API
-                            releases = httpRequest authentication: 'github-ai4os-hub',
-                                       httpMode: 'GET',
-                                       url: "${github_api_url}/releases"
-                            releases = readJSON text: releases.content
+        //                     repository = sh (returnStdout: true, script: "curl -s ${github_api_url}").trim()
 
-                            // Uncomment this to retrigger all releases in reverse order,
-                            // and comment the next line
-                            // releases = releases.reverse()
-                            // Sync only the last release (if any releases exist)
-                            if (releases && releases.size() > 0) {
-                                releases = [releases[0]]
-                            } else {
-                                // No releases found; nothing to retrigger
-                                releases = []
-                            }
+        //                     // Get all releases from GitHub API
+        //                     releases = httpRequest authentication: 'github-ai4os-hub',
+        //                                httpMode: 'GET',
+        //                                url: "${github_api_url}/releases"
+        //                     releases = readJSON text: releases.content
 
-                            for (release in releases) {
-                                println("Retriggering release: ${release.tag_name}")
-                                release = writeJSON returnText: true, json: release
+        //                     // Uncomment this to retrigger all releases in reverse order,
+        //                     // and comment the next line
+        //                     // releases = releases.reverse()
+        //                     // Sync only the last release (if any releases exist)
+        //                     if (releases && releases.size() > 0) {
+        //                         releases = [releases[0]]
+        //                     } else {
+        //                         // No releases found; nothing to retrigger
+        //                         releases = []
+        //                     }
 
-                                requestBody = '{"action": "published", "release": ' + release + ', "repository": ' + repository + '}'
-                                httpRequest httpMode: 'POST',
-                                            acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON',
-                                            url: hook_url,
-                                            quiet: true,
-                                            requestBody: requestBody,
-                                            validResponseCodes: "202,409"
-                            }
-                        }
-                    }
-                }
+        //                     for (release in releases) {
+        //                         println("Retriggering release: ${release.tag_name}")
+        //                         release = writeJSON returnText: true, json: release
 
-                stage('Zenodo: get Zenodo DOI') {
-                    steps {
-                        checkout scm
-                        script {
-                            withFolderProperties{
-                                zenodo_api_url = env.ZENODO_API_URL
-                                zenodo_community = env.ZENODO_COMMUNITY
-                            }
-                            query = "type:software%20AND ${env.REPO_URL}"
-                            query = URLEncoder.encode(query, "UTF-8")
+        //                         requestBody = '{"action": "published", "release": ' + release + ', "repository": ' + repository + '}'
+        //                         httpRequest httpMode: 'POST',
+        //                                     acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON',
+        //                                     url: hook_url,
+        //                                     quiet: true,
+        //                                     requestBody: requestBody,
+        //                                     validResponseCodes: "202,409"
+        //                     }
+        //                 }
+        //             }
+        //         }
 
-                            // Search for Zenodo record in Zenodo API
-                            response = httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
-                                       httpMode: 'GET',
-                                       url: "${zenodo_api_url}/records?size=1&q=${query}"
-                            response = readJSON text: response.content
+        //         stage('Zenodo: get Zenodo DOI') {
+        //             steps {
+        //                 checkout scm
+        //                 script {
+        //                     withFolderProperties{
+        //                         zenodo_api_url = env.ZENODO_API_URL
+        //                         zenodo_community = env.ZENODO_COMMUNITY
+        //                     }
+        //                     query = "type:software%20AND ${env.REPO_URL}"
+        //                     query = URLEncoder.encode(query, "UTF-8")
 
-                            def hits = response?.hits?.hits
-                            if (hits && hits.size() > 0 && hits[0]?.links?.parent_doi) {
-                                zenodo_doi = hits[0].links.parent_doi
-                                echo "Found Zenodo DOI: ${zenodo_doi}"
-                            } else {
-                                echo "No Zenodo record found for query '${query}'. Skipping DOI update."
-                            }
-                        }
-                    }
-                }
+        //                     // Search for Zenodo record in Zenodo API
+        //                     response = httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
+        //                                httpMode: 'GET',
+        //                                url: "${zenodo_api_url}/records?size=1&q=${query}"
+        //                     response = readJSON text: response.content
 
-                stage('Zenodo: update metadata files with Zenodo DOI') {
-                    when {
-                        expression {zenodo_doi}
-                    }
-                    environment {
-                        GITHUB_TOKEN = credentials('github-ai4os-hub')
-                    }
-                    steps {
-                        script {
-                            // Checkout the repository
-                            checkout scm
+        //                     def hits = response?.hits?.hits
+        //                     if (hits && hits.size() > 0 && hits[0]?.links?.parent_doi) {
+        //                         zenodo_doi = hits[0].links.parent_doi
+        //                         echo "Found Zenodo DOI: ${zenodo_doi}"
+        //                     } else {
+        //                         echo "No Zenodo record found for query '${query}'. Skipping DOI update."
+        //                     }
+        //                 }
+        //             }
+        //         }
 
-                            // Create a new branch, using shell, append a random suffix
-                            sh "git checkout -b zenodo-integration-${BUILD_NUMBER}"
+        //         stage('Zenodo: update metadata files with Zenodo DOI') {
+        //             when {
+        //                 expression {zenodo_doi}
+        //             }
+        //             environment {
+        //                 GITHUB_TOKEN = credentials('github-ai4os-hub')
+        //             }
+        //             steps {
+        //                 script {
+        //                     // Checkout the repository
+        //                     checkout scm
 
-                            // Setup git user
-                            sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
-                            sh "git config --global user.name 'AI4EOSC Jenkins user'"
+        //                     // Create a new branch, using shell, append a random suffix
+        //                     sh "git checkout -b zenodo-integration-${BUILD_NUMBER}"
 
-                            // V2 metadata
-                            meta = readYaml file: env.METADATA_FILE
+        //                     // Setup git user
+        //                     sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
+        //                     sh "git config --global user.name 'AI4EOSC Jenkins user'"
 
-                            if (meta["links"] == null) {
-                                meta["links"] = [:]
-                            }
+        //                     // V2 metadata
+        //                     meta = readYaml file: env.METADATA_FILE
 
-                            // If Zenodo DOI is not in metadata, add it
-                            if (!meta["links"].containsKey("zenodo_doi")) {
-                                meta["links"]["zenodo_doi"] = zenodo_doi
+        //                     if (meta["links"] == null) {
+        //                         meta["links"] = [:]
+        //                     }
 
-                                // If metadata already contains a DOI, do not
-                                // set it, as the user might have included it
-                                // on their own.
-                                if (!meta.containsKey("doi")) {
-                                    def zenodoParts = zenodo_doi.split("/")
-                                    meta["doi"] = zenodoParts[zenodoParts.length - 2] + "/" + zenodoParts[zenodoParts.length - 1]
-                                }
+        //                     // If Zenodo DOI is not in metadata, add it
+        //                     if (!meta["links"].containsKey("zenodo_doi")) {
+        //                         meta["links"]["zenodo_doi"] = zenodo_doi
 
-                                writeYaml file: env.METADATA_FILE, data: meta, overwrite: true, prettyPrint: 4
-                                sh "git add ${env.METADATA_FILE}"
-                            }
+        //                         // If metadata already contains a DOI, do not
+        //                         // set it, as the user might have included it
+        //                         // on their own.
+        //                         if (!meta.containsKey("doi")) {
+        //                             def zenodoParts = zenodo_doi.split("/")
+        //                             meta["doi"] = zenodoParts[zenodoParts.length - 2] + "/" + zenodoParts[zenodoParts.length - 1]
+        //                         }
 
-                            sh "git diff --cached --quiet || git commit -m 'Add Zenodo DOI to metadata file(s)'"
+        //                         writeYaml file: env.METADATA_FILE, data: meta, overwrite: true, prettyPrint: 4
+        //                         sh "git add ${env.METADATA_FILE}"
+        //                     }
 
-                            // Push the changes to the repository
-                            withCredentials([
-                                gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
-                                    sh "git push origin zenodo-integration-${BUILD_NUMBER}"
-                            }
+        //                     sh "git diff --cached --quiet || git commit -m 'Add Zenodo DOI to metadata file(s)'"
 
-                            // Get default branch for repo
-                            response = httpRequest authentication: 'github-ai4os-hub',
-                                       httpMode: 'GET',
-                                       url: "${github_api_url}"
-                            response = readJSON text: response.content
-                            default_branch = response["default_branch"]
+        //                     // Push the changes to the repository
+        //                     withCredentials([
+        //                         gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
+        //                             sh "git push origin zenodo-integration-${BUILD_NUMBER}"
+        //                     }
 
-                            // Now, create a PR using GitHub API
-                            pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata file(s). The obtained Zenodo DOI is ${zenodo_doi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
-                            pr_title = "Add Zenodo DOI to metadata"
-                            pr_head = "zenodo-integration-${BUILD_NUMBER}"
-                            pr = """{
-                                "title": "${pr_title}",
-                                "head": "${pr_head}",
-                                "base": "${default_branch}",
-                                "body": "${pr_body}"
-                            }"""
+        //                     // Get default branch for repo
+        //                     response = httpRequest authentication: 'github-ai4os-hub',
+        //                                httpMode: 'GET',
+        //                                url: "${github_api_url}"
+        //                     response = readJSON text: response.content
+        //                     default_branch = response["default_branch"]
 
-                            // create a PR
-                            response = httpRequest authentication: 'github-ai4os-hub',
-                                       httpMode: 'POST',
-                                       url: "${github_api_url}/pulls",
-                                       contentType: 'APPLICATION_JSON',
-                                       requestBody: pr
+        //                     // Now, create a PR using GitHub API
+        //                     pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata file(s). The obtained Zenodo DOI is ${zenodo_doi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
+        //                     pr_title = "Add Zenodo DOI to metadata"
+        //                     pr_head = "zenodo-integration-${BUILD_NUMBER}"
+        //                     pr = """{
+        //                         "title": "${pr_title}",
+        //                         "head": "${pr_head}",
+        //                         "base": "${default_branch}",
+        //                         "body": "${pr_body}"
+        //                     }"""
 
-                            println("PR created: ${response.content}")
-                        }
-                    }
-                }
-            }
-        }
+        //                     // create a PR
+        //                     response = httpRequest authentication: 'github-ai4os-hub',
+        //                                httpMode: 'POST',
+        //                                url: "${github_api_url}/pulls",
+        //                                contentType: 'APPLICATION_JSON',
+        //                                requestBody: pr
+
+        //                     println("PR created: ${response.content}")
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
         stage("Catalog: trigger cache refresh") {
             when {
