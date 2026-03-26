@@ -505,7 +505,7 @@ pipeline {
                                         httpMode: 'POST',
                                         url: "${github_api_url}/pulls",
                                         contentType: 'APPLICATION_JSON',
-                                        requestBody: JsonOutput.toJson(pr)
+                                        requestBody: pr
 
                                 println("PR created: ${response.content}")
                             } catch (err) {
