@@ -125,8 +125,7 @@ pipeline {
             steps {
                 //sh 'printenv'
                 script {
-                    sh "docker compose version"
-                    sh "docker-compose version"
+                    //FIXME: JePL still uses "docker-compose", i.e. versions 1.29
                     build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10), parameters: [string(name: 'SQA_CONTAINER_NAME', value: "${env.SQA_CONTAINER_NAME}")])
                 }
             }
@@ -289,10 +288,6 @@ pipeline {
             }
         }
 
-        // FIXME: Zenodo integration is misbehaving [1]
-        // Therefore we comment it until we find time to properly fix it.
-        // [1]: https://helpdesk.cloud.ai4eosc.eu/#ticket/zoom/36/209
-
         stage('Zenodo: integration stage') {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
@@ -432,7 +427,7 @@ pipeline {
                     when {
                         expression {zenodo_doi}
                         not {
-                            changeRequest()  // PR should not produce another PR
+                            changeRequest()  //PR should not produce another PR
                         }
                     }
                     environment {
@@ -456,6 +451,11 @@ pipeline {
                             if (meta["links"] == null) {
                                 meta["links"] = [:]
                             }
+
+                            // debug
+                            println("META: ${meta}")
+                            println("LINKS: ${meta['links']}")
+                            println("Zenodo_DOI: ${meta['links']['zenodo_doi']}")
 
                             // If Zenodo DOI is not in metadata, add it
                             if (!meta["links"].containsKey("zenodo_doi")) {
@@ -509,7 +509,7 @@ pipeline {
 
                                 println("PR created: ${response.content}")
                             } catch (err) {
-                                println("PR request failed: ${err}")
+                                unstable("PR request failed: ${err}")  //if PR fails, mark the stage and build as "unstable"
                             }
                         }
                     }
