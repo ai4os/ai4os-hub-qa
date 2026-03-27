@@ -438,14 +438,6 @@ pipeline {
                             // Checkout the repository
                             checkout scm
 
-                            // Create a new branch, using shell, append a random suffix based on BUILD_NUMBER + GIT_COMMIT
-                            branch_zenodo_doi = "zenodo-doi-${BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
-                            sh "git checkout -b ${branch_zenodo_doi}"
-
-                            // Setup git user
-                            sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
-                            sh "git config --global user.name 'AI4EOSC Jenkins user'"
-
                             // V2 metadata
                             meta = readYaml file: env.METADATA_FILE
 
@@ -453,13 +445,25 @@ pipeline {
                                 meta["links"] = [:]
                             }
 
-                            // debug
-                            println("META: ${meta}")
-                            println("LINKS: ${meta['links']}")
-                            println("Zenodo_DOI: ${meta['links']['zenodo_doi']}")
+                            // Check if zenodo_doi needs to be updated
+                            // Update if: key not present, value is empty, or value differs from found zenodo_doi
+                            existing_zenodo_doi = meta["links"]["zenodo_doi"]
+                            need_update = false
 
-                            // If Zenodo DOI is not in metadata, add it
-                            if (!meta["links"].containsKey("zenodo_doi")) {
+                            if (existing_zenodo_doi == null || existing_zenodo_doi == "" || existing_zenodo_doi != zenodo_doi) {
+                                need_update = true
+                            }
+
+                            if (need_update) {
+                                // Create a new branch, using shell, append a random suffix based on BUILD_NUMBER + GIT_COMMIT
+                                branch_zenodo_doi = "zenodo-doi-${BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+                                sh "git checkout -b ${branch_zenodo_doi}"
+
+                                // Setup git user
+                                sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
+                                sh "git config --global user.name 'AI4EOSC Jenkins user'"
+
+                                // Update zenodo_doi in metadata
                                 meta["links"]["zenodo_doi"] = zenodo_doi
 
                                 // If metadata already contains a DOI, do not
@@ -472,45 +476,47 @@ pipeline {
 
                                 writeYaml file: env.METADATA_FILE, data: meta, overwrite: true, prettyPrint: 4
                                 sh "git add ${env.METADATA_FILE}"
-                            }
 
-                            sh "git diff --cached --quiet || git commit -m 'Add Zenodo DOI to metadata file(s)'"
+                                sh "git diff --cached --quiet || git commit -m 'Add Zenodo DOI to metadata file(s)'"
 
-                            // Push the changes to the repository
-                            withCredentials([
-                                gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
-                                    sh "git push origin ${branch_zenodo_doi}"
-                            }
+                                // Push the changes to the repository
+                                withCredentials([
+                                    gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
+                                        sh "git push origin ${branch_zenodo_doi}"
+                                }
 
-                            // Get default branch for repo
-                            response = httpRequest authentication: 'github-ai4os-hub',
-                                       httpMode: 'GET',
-                                       url: "${github_api_url}"
-                            response = readJSON text: response.content
-                            default_branch = response["default_branch"]
-
-                            // Now, create a PR using GitHub API
-                            pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata file(s). The obtained Zenodo DOI is ${zenodo_doi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
-                            pr_title = "Add Zenodo DOI to metadata"
-                            pr_head = "${branch_zenodo_doi}"
-                            pr = """{
-                                "title": "${pr_title}",
-                                "head": "${pr_head}",
-                                "base": "${default_branch}",
-                                "body": "${pr_body}"
-                            }"""
-
-                            // create a PR
-                            try {
+                                // Get default branch for repo
                                 response = httpRequest authentication: 'github-ai4os-hub',
-                                        httpMode: 'POST',
-                                        url: "${github_api_url}/pulls",
-                                        contentType: 'APPLICATION_JSON',
-                                        requestBody: pr
+                                           httpMode: 'GET',
+                                           url: "${github_api_url}"
+                                response = readJSON text: response.content
+                                default_branch = response["default_branch"]
 
-                                println("PR created: ${response.content}")
-                            } catch (err) {
-                                unstable("PR request failed: ${err}")  //if PR fails, mark the stage and build as "unstable"
+                                // Now, create a PR using GitHub API
+                                pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata file(s). The obtained Zenodo DOI is ${zenodo_doi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
+                                pr_title = "Add Zenodo DOI to metadata"
+                                pr_head = "${branch_zenodo_doi}"
+                                pr = """{
+                                    "title": "${pr_title}",
+                                    "head": "${pr_head}",
+                                    "base": "${default_branch}",
+                                    "body": "${pr_body}"
+                                }"""
+
+                                // create a PR
+                                try {
+                                    response = httpRequest authentication: 'github-ai4os-hub',
+                                            httpMode: 'POST',
+                                            url: "${github_api_url}/pulls",
+                                            contentType: 'APPLICATION_JSON',
+                                            requestBody: pr
+
+                                    println("PR created: ${response.content}")
+                                } catch (err) {
+                                    unstable("PR request failed: ${err}")  //if PR fails, mark the stage and build as "unstable"
+                                }
+                            } else {
+                                echo "Zenodo DOI in metadata is already up-to-date (${existing_zenodo_doi} (existing) vs. ${zenodo_doi} (found)). Skipping branch/PR creation."
                             }
                         }
                     }
