@@ -438,8 +438,9 @@ pipeline {
                             // Checkout the repository
                             checkout scm
 
-                            // Create a new branch, using shell, append a random suffix
-                            sh "git checkout -b zenodo-integration-${BUILD_NUMBER}"
+                            // Create a new branch, using shell, append a random suffix based on BUILD_NUMBER + GIT_COMMIT
+                            branch_zenodo_doi = "zenodo-doi-${BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+                            sh "git checkout -b ${branch_zenodo_doi}"
 
                             // Setup git user
                             sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
@@ -478,7 +479,7 @@ pipeline {
                             // Push the changes to the repository
                             withCredentials([
                                 gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
-                                    sh "git push origin zenodo-integration-${BUILD_NUMBER}"
+                                    sh "git push origin ${branch_zenodo_doi}"
                             }
 
                             // Get default branch for repo
@@ -491,7 +492,7 @@ pipeline {
                             // Now, create a PR using GitHub API
                             pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata file(s). The obtained Zenodo DOI is ${zenodo_doi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
                             pr_title = "Add Zenodo DOI to metadata"
-                            pr_head = "zenodo-integration-${BUILD_NUMBER}"
+                            pr_head = "${branch_zenodo_doi}"
                             pr = """{
                                 "title": "${pr_title}",
                                 "head": "${pr_head}",
