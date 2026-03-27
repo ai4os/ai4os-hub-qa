@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.2](https://github.com/ai4os/ai4os-hub-qa/compare/v1.3.1...v1.3.2) (2026-03-27)
+
+
+### Bug Fixes
+
+* add error catch for PR ([90d0b93](https://github.com/ai4os/ai4os-hub-qa/commit/90d0b93b0523f9d73a44d098a91fd2c08e6cfb3d))
+* Add Zenodo DOI and create PR only if key not present, value is empty, or value differs from found zenodo_doi ([300f4bb](https://github.com/ai4os/ai4os-hub-qa/commit/300f4bb51fe04b4fdfbe7e8d312ecc18e9f592d8))
+* debug docker-compose version ([f8f229d](https://github.com/ai4os/ai4os-hub-qa/commit/f8f229d90f71840eee11b3c7b1dcc4e488ed577b))
+* debug zenodo_doi ([483fed5](https://github.com/ai4os/ai4os-hub-qa/commit/483fed5d9c740eaee824282e3324eaf3c726c0c7))
+* disable Zenodo integration until we can debug it ([f75951d](https://github.com/ai4os/ai4os-hub-qa/commit/f75951dcfdb58e272c49aa5e2fcfd31fc1071baf))
+* extend branch name for Zenodo DOI with GIT_COMMIT.take(7) ([68b838c](https://github.com/ai4os/ai4os-hub-qa/commit/68b838cdccd07713bcfdd89dd1f712784b8d3753))
+* remove JsonOutput for PR requestBody, it should already be JSON formatted ([aee12d5](https://github.com/ai4os/ai4os-hub-qa/commit/aee12d545ded68553ab9948d8ce00b15e8f47bb7))
+* skip creating PR triggered by PR ([8fe2e03](https://github.com/ai4os/ai4os-hub-qa/commit/8fe2e03bc0483ed3ab7a210976906257b03f2be5))
+* use prettyPrint when writing YAML ([5d0e26c](https://github.com/ai4os/ai4os-hub-qa/commit/5d0e26cddd1369e4bdc6a580faa0056ecdad0e5b))
+
 ## [1.3.1](https://github.com/ai4os/ai4os-hub-qa/compare/v1.3.0...v1.3.1) (2026-01-13)
 
 
