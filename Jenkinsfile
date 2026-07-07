@@ -594,15 +594,12 @@ pipeline {
             }
 
             steps {
+                dir("_ai4os-hub-qa") {
+                    git branch: "master",
+                        url: 'https://github.com/ai4os/ai4os-hub-qa'
+                }
                 withFolderProperties {
-                    script {
-                        dir("_ai4os-hub-qa") {
-                            git branch: "master",
-                            url: 'https://github.com/ai4os/ai4os-hub-qa'
-                        }
-
-                        sh "./_ai4os-hub-qa/scripts/oscar_update.py"
-                    }
+                    sh "./_ai4os-hub-qa/scripts/oscar_update.py"
                 }
             }
         }
