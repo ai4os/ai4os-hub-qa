@@ -5,6 +5,12 @@
 ]) _
 
 
+/** Return the given URL with any trailing slash removed. */
+def stripTrailingSlash(String url) {
+    return url.endsWith('/') ? url[0..-2] : url
+}
+
+
 def projectConfig
 
 pipeline {
@@ -545,7 +551,7 @@ pipeline {
                     // build PAPI route to refresh the module
                     withFolderProperties {
                         // retrieve PAPI_URL and remove trailing slash "/" (AI4OS_PAPI_URL is set in Jenkins)
-                        AI4OS_PAPI_URL = "${env.AI4OS_PAPI_URL.endsWith("/") ? env.AI4OS_PAPI_URL[0..-2] : env.AI4OS_PAPI_URL}"
+                        AI4OS_PAPI_URL = stripTrailingSlash(env.AI4OS_PAPI_URL)
                     }
                     PAPI_REFRESH_URL = "${AI4OS_PAPI_URL}/v1/catalog/modules/refresh?item_name=${REPO_NAME}"
                     // have to use "'" to avoid injection of credentials
@@ -612,7 +618,7 @@ pipeline {
                     // build PROVENANCE route to refresh the module
                     withFolderProperties {
                         // retrieve PROVENANCE_URL and remove trailing slash "/"
-                        PROVENANCE_URL = "${env.AI4OS_PROVENANCE_URL.endsWith("/") ? env.AI4OS_PROVENANCE_URL[0..-2] : env.AI4OS_PROVENANCE_URL}"
+                        PROVENANCE_URL = stripTrailingSlash(env.AI4OS_PROVENANCE_URL)
                     }
                     PROVENANCE_REFRESH_URL = "${PROVENANCE_URL}/metadata"
 
