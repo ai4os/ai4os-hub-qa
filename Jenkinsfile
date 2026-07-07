@@ -10,6 +10,20 @@ def stripTrailingSlash(String url) {
     return url.endsWith('/') ? url[0..-2] : url
 }
 
+/**
+ * Execute a pre-built curl command and validate the HTTP response status.
+ * Errors the build if the status code is not 200 or 201.
+ * NOTE: curlCmd must be constructed with single-quoted credential references
+ * to prevent unsafe Groovy interpolation of secrets into the shell command.
+ */
+def curlAndValidate(String curlCmd, String endpoint) {
+    def response = sh(returnStdout: true, script: curlCmd).trim()
+    def statusCode = sh(returnStdout: true, script: "echo '${response}' |grep HTTP | awk '{print \$2}'").trim().toInteger()
+    if (statusCode != 200 && statusCode != 201) {
+        error("Returned status code = ${statusCode} when calling ${endpoint}")
+    }
+}
+
 
 def projectConfig
 
@@ -558,11 +572,7 @@ pipeline {
                     // see https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
                     CURL_PAPI_CALL = "curl -si -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " +
                         '-H "Authorization: Bearer $AI4OS_PAPI_SECRET"'
-                    response = sh (returnStdout: true, script: CURL_PAPI_CALL).trim()
-                    status_code = sh (returnStdout: true, script: "echo '${response}' |grep HTTP | awk '{print \$2}'").trim().toInteger()
-                    if (status_code != 200 && status_code != 201) {
-                        error("Returned status code = $status_code when calling $PAPI_REFRESH_URL")
-                    }
+                    curlAndValidate(CURL_PAPI_CALL, PAPI_REFRESH_URL)
                 }
             }
         }
@@ -654,11 +664,7 @@ pipeline {
                         "}" +
                         "\""
 
-                    response = sh (returnStdout: true, script: CURL_PROVENANCE_CALL).trim()
-                    status_code = sh (returnStdout: true, script: "echo '${response}' |grep HTTP | awk '{print \$2}'").trim().toInteger()
-                    if (status_code != 200 && status_code != 201) {
-                        error("Returned status code = $status_code when calling $PROVENANCE_REFRESH_URL")
-                    }
+                    curlAndValidate(CURL_PROVENANCE_CALL, PROVENANCE_REFRESH_URL)
                 }
             }
         }
