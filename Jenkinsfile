@@ -143,7 +143,6 @@ pipeline {
                 }
             }
             steps {
-                //sh 'printenv'
                 script {
                     //FIXME: JePL still uses "docker-compose", i.e. versions 1.29
                     build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10), parameters: [string(name: 'SQA_CONTAINER_NAME', value: "${env.SQA_CONTAINER_NAME}")])
@@ -338,7 +337,7 @@ pipeline {
                             for (entry in content) {
                                 if (entry.config.url.startsWith(zenodo_api_url)) {
                                     println("Zenodo webhook already enabled")
-                                    // If hookUrl is defined, terminate the stage
+                                    // needZenodoRetrigger stays false; return early to skip enabling
                                     needZenodoRetrigger = false
                                     return
                                 }
@@ -631,9 +630,9 @@ pipeline {
                     // [1]: https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
 
                     // In order for variable expansion to happen in bash, the string has
-                    // to be enclosed in double quotes. So to be able to expand MLFLOW_PWD
+                    // to be enclosed in double quotes. So to be able to expand MLFLOW_PSW
                     // we have to wrap data with double quotes (--data "...").
-                    // But JSON also need double quotes, so we have to escape them.
+                    // But JSON also needs double quotes, so we have to escape them.
                     // That's why the data section looks a bit funky with the \\\"
                     CURL_PROVENANCE_CALL = "curl -i " +
                         "-X POST '${PROVENANCE_REFRESH_URL}' " +
@@ -642,17 +641,17 @@ pipeline {
                         "--data \"" +
                         "{" +
                         "    \\\"sources\\\": {" +
-                        "      \\\"applicationId\\\": \\\"${REPO_NAME}\\\"," +
+                        "      \\\"applicationId\\\": \\\"${env.REPO_NAME}\\\"," +
                         "      \\\"jenkinsWorkflow\\\": {" +
-                        "         \\\"name\\\": \\\"${REPO_NAME}\\\"," +
+                        "         \\\"name\\\": \\\"${env.REPO_NAME}\\\"," +
                         "         \\\"group\\\": \\\"AI4OS-hub\\\"," +
-                        "         \\\"branch\\\": \\\"${BRANCH_NAME}\\\"," +
-                        "         \\\"build\\\": ${BUILD_NUMBER}" +
+                        "         \\\"branch\\\": \\\"${env.BRANCH_NAME}\\\"," +
+                        "         \\\"build\\\": ${env.BUILD_NUMBER}" +
                         "      }" +
                         "    }," +
                         "    \\\"credentials\\\": {" +
                         "      \\\"mlflow\\\": {" +
-                        "         \\\"username\\\": \\\"${MLFLOW_USR}\\\"," +
+                        "         \\\"username\\\": \\\"${env.MLFLOW_USR}\\\"," +
                         "         \\\"password\\\": \\\"" + '$MLFLOW_PSW' + "\\\"" +
                         "      }" +
                         "    }" +
