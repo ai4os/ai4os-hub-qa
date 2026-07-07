@@ -91,27 +91,27 @@ pipeline {
                     // (e.g. First time build, commits were rewritten by user),
                     // we fallback to last commit
 
-                    need_build = true
-                    changed_files = ""
+                    needBuild = true
+                    changedFiles = ""
 
                     try {
-                        changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
+                        changedFiles = sh (returnStdout: true, script: "git diff --name-only HEAD ${env.GIT_PREVIOUS_SUCCESSFUL_COMMIT}").trim()
                     } catch (Exception exa) {
                         println("[WARNING] Exception: " + exa.toString())
                         println("[INFO] Considering changes only in the last commit..")
                         try {
-                            changed_files = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
+                            changedFiles = sh (returnStdout: true, script: "git diff --name-only HEAD^ HEAD").trim()
                         } catch (Exception exb) {
                             println("[WARNING] Exception: " + exb.toString())
                             // check if we deal with the initial commit / first commit
-                            repo_commits = sh (returnStdout: true, script: "git rev-list HEAD --count").trim()
-                            if (repo_commits.toInteger() == 1) {
+                            repoCommits = sh (returnStdout: true, script: "git rev-list HEAD --count").trim()
+                            if (repoCommits.toInteger() == 1) {
                                 println("============================ [WARNING] ============================")
                                 println(" It seems this is your FIRST / INITIAL commit")
                                 println(" We run only basic tests. Please, consider further updating the code")
                                 println("============================ [WARNING] ============================")
-                                changed_files = ""
-                                need_build = false
+                                changedFiles = ""
+                                needBuild = false
                             }
                         }
                     }
@@ -121,13 +121,13 @@ pipeline {
                     // we need to check if the metadata files are present in the list of changed files
 
                     // Check if metadata files are present in the list of changed files
-                    if (changed_files.contains(env.METADATA_FILE)) {
+                    if (changedFiles.contains(env.METADATA_FILE)) {
                         // Convert to an array and pop items
-                        changed_files = changed_files.tokenize()
-                        changed_files.removeAll([env.METADATA_FILE])
+                        changedFiles = changedFiles.tokenize()
+                        changedFiles.removeAll([env.METADATA_FILE])
                         // now check if the list is empty
-                        if (changed_files.size() == 0) {
-                            need_build = false
+                        if (changedFiles.size() == 0) {
+                            needBuild = false
                         }
                     }
                 }
@@ -138,7 +138,7 @@ pipeline {
         stage("Tests: user-defined module tests") {
             when {
                 anyOf {
-                    expression {need_build}
+                    expression {needBuild}
                     triggeredBy 'UserIdCause'
                 }
             }
@@ -164,7 +164,7 @@ pipeline {
                     branch 'release/*'
                 }
                 anyOf {
-                    expression {need_build}
+                    expression {needBuild}
                     triggeredBy 'UserIdCause'
                 }
             }
@@ -327,7 +327,7 @@ pipeline {
                             }
                             github_api_url = env.REPO_URL.replace("github.com", "api.github.com/repos")
                             // Get repository ID from GitHub API
-                            repo_id = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
+                            repoId = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
                             // Get webhook URL form GitHub API
                             response = httpRequest authentication: 'github-ai4os-hub',
                                        httpMode: 'GET',
@@ -338,24 +338,24 @@ pipeline {
                             for (entry in content) {
                                 if (entry.config.url.startsWith(zenodo_api_url)) {
                                     println("Zenodo webhook already enabled")
-                                    // If hook_url is defined, terminate the stage
-                                    need_zenodo_retrigger = false
+                                    // If hookUrl is defined, terminate the stage
+                                    needZenodoRetrigger = false
                                     return
                                 }
                             }
 
-                            need_zenodo_retrigger = true
+                            needZenodoRetrigger = true
                             // Otherwise, enable Zenodo integration
                             httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
                                         httpMode: 'POST',
-                                        url: "${zenodo_api_url}user/github/repositories/${repo_id}/enable"
+                                        url: "${zenodo_api_url}user/github/repositories/${repoId}/enable"
                         }
                     }
                 }
 
                 stage('Zenodo: trigger webhook on first integration') {
                     when {
-                        expression {need_zenodo_retrigger}
+                        expression {needZenodoRetrigger}
                     }
                     steps {
                         checkout scm
@@ -375,7 +375,7 @@ pipeline {
                             for (entry in content) {
                                 if (entry.config.url.startsWith(zenodo_api_url)) {
                                     println("Zenodo webhook enabled")
-                                    hook_url = entry.config.url
+                                    hookUrl = entry.config.url
                                 }
                             }
                             // Now, retrigger all releases to trigger Zenodo integration
@@ -406,7 +406,7 @@ pipeline {
                                 requestBody = '{"action": "published", "release": ' + release + ', "repository": ' + repository + '}'
                                 httpRequest httpMode: 'POST',
                                             acceptType: 'APPLICATION_JSON', contentType: 'APPLICATION_JSON',
-                                            url: hook_url,
+                                            url: hookUrl,
                                             quiet: true,
                                             requestBody: requestBody,
                                             validResponseCodes: "202,409"
@@ -434,8 +434,8 @@ pipeline {
 
                             def hits = response?.hits?.hits
                             if (hits && hits.size() > 0 && hits[0]?.links?.parent_doi) {
-                                zenodo_doi = hits[0].links.parent_doi
-                                echo "Found Zenodo DOI: ${zenodo_doi}"
+                                zenodoDoi = hits[0].links.parent_doi
+                                echo "Found Zenodo DOI: ${zenodoDoi}"
                             } else {
                                 echo "No Zenodo record found for query '${query}'. Skipping DOI update."
                             }
@@ -445,7 +445,7 @@ pipeline {
 
                 stage('Zenodo: update metadata files with Zenodo DOI') {
                     when {
-                        expression {zenodo_doi}
+                        expression {zenodoDoi}
                         not {
                             changeRequest()  //PR should not produce another PR
                         }
@@ -465,32 +465,32 @@ pipeline {
                                 meta["links"] = [:]
                             }
 
-                            // Check if zenodo_doi needs to be updated
-                            // Update if: key not present, value is empty, or value differs from found zenodo_doi
-                            existing_zenodo_doi = meta["links"]["zenodo_doi"]
-                            need_update = false
+                            // Check if zenodoDoi needs to be updated
+                            // Update if: key not present, value is empty, or value differs from found zenodoDoi
+                            existing_zenodoDoi = meta["links"]["zenodo_doi"]
+                            needUpdate = false
 
-                            if (existing_zenodo_doi == null || existing_zenodo_doi == "" || existing_zenodo_doi != zenodo_doi) {
-                                need_update = true
+                            if (existing_zenodoDoi == null || existing_zenodoDoi == "" || existing_zenodoDoi != zenodoDoi) {
+                                needUpdate = true
                             }
 
-                            if (need_update) {
+                            if (needUpdate) {
                                 // Create a new branch, using shell, append a random suffix based on BUILD_NUMBER + GIT_COMMIT
-                                branch_zenodo_doi = "zenodo-doi-${BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
-                                sh "git checkout -b ${branch_zenodo_doi}"
+                                branchZenodoDoi = "zenodo-doi-${BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+                                sh "git checkout -b ${branchZenodoDoi}"
 
                                 // Setup git user
                                 sh "git config --global user.email 'ai4eosc-support@listas.csic.es'"
                                 sh "git config --global user.name 'AI4EOSC Jenkins user'"
 
-                                // Update zenodo_doi in metadata
-                                meta["links"]["zenodo_doi"] = zenodo_doi
+                                // Update zenodoDoi in metadata
+                                meta["links"]["zenodo_doi"] = zenodoDoi
 
                                 // If metadata already contains a DOI, do not
                                 // set it, as the user might have included it
                                 // on their own.
                                 if (!meta.containsKey("doi")) {
-                                    def zenodoParts = zenodo_doi.split("/")
+                                    def zenodoParts = zenodoDoi.split("/")
                                     meta["doi"] = zenodoParts[zenodoParts.length - 2] + "/" + zenodoParts[zenodoParts.length - 1]
                                 }
 
@@ -502,7 +502,7 @@ pipeline {
                                 // Push the changes to the repository
                                 withCredentials([
                                     gitUsernamePassword(credentialsId: 'github-ai4os-hub', gitToolName: 'git-tool')]) {
-                                        sh "git push origin ${branch_zenodo_doi}"
+                                        sh "git push origin ${branchZenodoDoi}"
                                 }
 
                                 // Get default branch for repo
@@ -510,17 +510,17 @@ pipeline {
                                            httpMode: 'GET',
                                            url: "${github_api_url}"
                                 response = readJSON text: response.content
-                                default_branch = response["default_branch"]
+                                defaultBranch = response["default_branch"]
 
                                 // Now, create a PR using GitHub API
-                                pr_body = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata file(s). The obtained Zenodo DOI is ${zenodo_doi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
-                                pr_title = "Add Zenodo DOI to metadata"
-                                pr_head = "${branch_zenodo_doi}"
+                                prBody = "This is an automated change.\\n\\nThis pull request includes the Zenodo DOI in the metadata file(s). The obtained Zenodo DOI is ${zenodoDoi}, please verify that this DOI corresponds to your repository, carefully review the changes and, if they are correct, merge the PR."
+                                prTitle = "Add Zenodo DOI to metadata"
+                                prHead = "${branchZenodoDoi}"
                                 pr = """{
-                                    "title": "${pr_title}",
-                                    "head": "${pr_head}",
-                                    "base": "${default_branch}",
-                                    "body": "${pr_body}"
+                                    "title": "${prTitle}",
+                                    "head": "${prHead}",
+                                    "base": "${defaultBranch}",
+                                    "body": "${prBody}"
                                 }"""
 
                                 // create a PR
@@ -536,7 +536,7 @@ pipeline {
                                     unstable("PR request failed: ${err}")  //if PR fails, mark the stage and build as "unstable"
                                 }
                             } else {
-                                echo "Zenodo DOI in metadata is already up-to-date (${existing_zenodo_doi} (existing) vs. ${zenodo_doi} (found)). Skipping branch/PR creation."
+                                echo "Zenodo DOI in metadata is already up-to-date (${existing_zenodoDoi} (existing) vs. ${zenodoDoi} (found)). Skipping branch/PR creation."
                             }
                         }
                     }
@@ -560,14 +560,12 @@ pipeline {
             }
             steps {
                 script {
-                    // extract REPO_NAME from REPO_URL (.git already removed from REPO_URL)
-                    REPO_NAME = "${REPO_URL.tokenize('/')[-1]}"
                     // build PAPI route to refresh the module
                     withFolderProperties {
                         // retrieve PAPI_URL and remove trailing slash "/" (AI4OS_PAPI_URL is set in Jenkins)
                         AI4OS_PAPI_URL = stripTrailingSlash(env.AI4OS_PAPI_URL)
                     }
-                    PAPI_REFRESH_URL = "${AI4OS_PAPI_URL}/v1/catalog/modules/refresh?item_name=${REPO_NAME}"
+                    PAPI_REFRESH_URL = "${AI4OS_PAPI_URL}/v1/catalog/modules/refresh?item_name=${env.REPO_NAME}"
                     // have to use "'" to avoid injection of credentials
                     // see https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
                     CURL_PAPI_CALL = "curl -si -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " +
