@@ -307,6 +307,9 @@ pipeline {
             }
         }
 
+        stage('Post-build tasks') {
+            parallel {
+
         stage('Zenodo: integration stage') {
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
@@ -662,6 +665,9 @@ pipeline {
                 }
             }
         }
+
+            } // end parallel
+        } // end stage('Post-build tasks')
 
     }
     post {
