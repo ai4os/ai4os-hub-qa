@@ -1,10 +1,5 @@
 // vim: filetype=groovy
 
-@Library([
-    'github.com/indigo-dc/jenkins-pipeline-library@release/2.1.1',
-]) _
-
-
 /** Return the given URL with any trailing slash removed. */
 def stripTrailingSlash(String url) {
     return url.endsWith('/') ? url[0..-2] : url
@@ -45,7 +40,6 @@ pipeline {
         // Remove .git from the GIT_URL link
         REPO_URL = "${env.GIT_URL.endsWith(".git") ? env.GIT_URL[0..-5] : env.GIT_URL}"
         REPO_NAME = "${REPO_URL.tokenize('/')[-1]}"
-        SQA_CONTAINER_NAME = "${env.BUILD_TAG.replace('/','-').replace('\\','-')}"
         // Get list of AI4OS Hub repositories from "modules-catalog/.gitmodules"
         MODULES_CATALOG_URL = "https://raw.githubusercontent.com/ai4os-hub/modules-catalog/master/.gitmodules"
         MODULES = sh (returnStdout: true, script: "curl -s ${MODULES_CATALOG_URL}").trim()
@@ -153,8 +147,7 @@ pipeline {
             }
             steps {
                 script {
-                    //FIXME: JePL still uses "docker-compose", i.e. versions 1.29
-                    build(job: getTestJobPath(env.JOB_NAME), parameters: [string(name: 'SQA_CONTAINER_NAME', value: "${env.SQA_CONTAINER_NAME}")])
+                    build(job: getTestJobPath(env.JOB_NAME))
                 }
             }
         }
