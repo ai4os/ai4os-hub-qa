@@ -311,6 +311,9 @@ pipeline {
             parallel {
 
         stage('Zenodo: integration stage') {
+            options {
+                timeout(time: 10, unit: 'MINUTES')
+            }
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
             }
@@ -329,10 +332,11 @@ pipeline {
                             }
                             github_api_url = env.REPO_URL.replace("github.com", "api.github.com/repos")
                             // Get repository ID from GitHub API
-                            repoId = sh (returnStdout: true, script: "curl -s ${github_api_url} | jq '.id'").trim()
+                            repoId = sh (returnStdout: true, script: "curl -s --max-time 10 ${github_api_url} | jq '.id'").trim()
                             // Get webhook URL form GitHub API
                             response = httpRequest authentication: 'github-ai4os-hub',
                                        httpMode: 'GET',
+                                       timeout: 30,
                                        url: "${github_api_url}/hooks"
 
                             content = readJSON text: response.content
@@ -350,6 +354,7 @@ pipeline {
                             // Otherwise, enable Zenodo integration
                             httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
                                         httpMode: 'POST',
+                                        timeout: 30,
                                         url: "${zenodo_api_url}user/github/repositories/${repoId}/enable"
                         }
                     }
@@ -370,6 +375,7 @@ pipeline {
                             // Get webhook URL form GitHub API
                             response = httpRequest authentication: 'github-ai4os-hub',
                                        httpMode: 'GET',
+                                       timeout: 30,
                                        url: "${github_api_url}/hooks"
 
                             content = readJSON text: response.content
@@ -382,11 +388,12 @@ pipeline {
                             }
                             // Now, retrigger all releases to trigger Zenodo integration
 
-                            repository = sh (returnStdout: true, script: "curl -s ${github_api_url}").trim()
+                            repository = sh (returnStdout: true, script: "curl -s --max-time 10 ${github_api_url}").trim()
 
                             // Get all releases from GitHub API
                             releases = httpRequest authentication: 'github-ai4os-hub',
                                        httpMode: 'GET',
+                                       timeout: 30,
                                        url: "${github_api_url}/releases"
                             releases = readJSON text: releases.content
 
@@ -431,6 +438,7 @@ pipeline {
                             // Search for Zenodo record in Zenodo API
                             response = httpRequest customHeaders: [[name: 'Authorization', value: 'Bearer ' + env.ZENODO_TOKEN]],
                                        httpMode: 'GET',
+                                       timeout: 30,
                                        url: "${zenodo_api_url}/records?size=1&q=${query}"
                             response = readJSON text: response.content
 
@@ -510,6 +518,7 @@ pipeline {
                                 // Get default branch for repo
                                 response = httpRequest authentication: 'github-ai4os-hub',
                                            httpMode: 'GET',
+                                           timeout: 30,
                                            url: "${github_api_url}"
                                 response = readJSON text: response.content
                                 defaultBranch = response["default_branch"]
@@ -529,6 +538,7 @@ pipeline {
                                 try {
                                     response = httpRequest authentication: 'github-ai4os-hub',
                                             httpMode: 'POST',
+                                            timeout: 30,
                                             url: "${github_api_url}/pulls",
                                             contentType: 'APPLICATION_JSON',
                                             requestBody: pr
@@ -547,6 +557,9 @@ pipeline {
         }
 
         stage("Catalog: trigger cache refresh") {
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
                 anyOf {
@@ -570,7 +583,7 @@ pipeline {
                     PAPI_REFRESH_URL = "${AI4OS_PAPI_URL}/v1/catalog/modules/refresh?item_name=${env.REPO_NAME}"
                     // have to use "'" to avoid injection of credentials
                     // see https://www.jenkins.io/doc/book/pipeline/jenkinsfile/#handling-credentials
-                    CURL_PAPI_CALL = "curl -si -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " +
+                    CURL_PAPI_CALL = "curl -si --max-time 30 -X PUT ${PAPI_REFRESH_URL} -H 'accept: application/json' " +
                         '-H "Authorization: Bearer $AI4OS_PAPI_SECRET"'
                     curlAndValidate(CURL_PAPI_CALL, PAPI_REFRESH_URL)
                 }
@@ -578,6 +591,9 @@ pipeline {
         }
 
         stage('OSCAR: update services') {
+            options {
+                timeout(time: 15, unit: 'MINUTES')
+            }
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
                 not {
@@ -605,6 +621,9 @@ pipeline {
         }
 
         stage("Provenance: update database") {
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
             when {
                 expression {env.MODULES.contains(env.REPO_URL)}
                 anyOf {
@@ -637,7 +656,7 @@ pipeline {
                     // we have to wrap data with double quotes (--data "...").
                     // But JSON also needs double quotes, so we have to escape them.
                     // That's why the data section looks a bit funky with the \\\"
-                    CURL_PROVENANCE_CALL = "curl -i " +
+                    CURL_PROVENANCE_CALL = "curl -i --max-time 30 " +
                         "-X POST '${PROVENANCE_REFRESH_URL}' " +
                         '-H "X-API-KEY: $PROVENANCE_TOKEN" ' +
                         "-H 'Content-Type: application/json' " +
