@@ -16,4 +16,5 @@ following configuration:
     - To build with the [Remote File](https://plugins.jenkins.io/remote-file/) plugin configured to pull this repo
 - An organization called "AI4OS-Hub-TEST", configured:
     - To scan the repositories and branches of your choice from Github (the same as above)
-    - Not building anything (as the build will be triggered by the other jobs)
+    - To host the user-test jobs triggered by the main pipeline
+    - It remains in place during the transition, but JePL-specific configuration files are no longer required in this repository
