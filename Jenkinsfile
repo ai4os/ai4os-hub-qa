@@ -10,6 +10,15 @@ def stripTrailingSlash(String url) {
     return url.endsWith('/') ? url[0..-2] : url
 }
 
+/** Return the matching test job path for the current multibranch job. */
+def getTestJobPath(String jobName) {
+    def jobPath = jobName.tokenize('/')
+    if (jobPath.size() < 2) {
+        error("Unexpected JOB_NAME format: ${jobName}")
+    }
+    return "/AI4OS-Hub-TEST/${jobPath.drop(1).join('/')}"
+}
+
 /**
  * Execute a pre-built curl command and validate the HTTP response status.
  * Errors the build if the status code is not 200 or 201.
@@ -145,7 +154,7 @@ pipeline {
             steps {
                 script {
                     //FIXME: JePL still uses "docker-compose", i.e. versions 1.29
-                    build(job: "/AI4OS-HUB-TEST/" + env.JOB_NAME.drop(10), parameters: [string(name: 'SQA_CONTAINER_NAME', value: "${env.SQA_CONTAINER_NAME}")])
+                    build(job: getTestJobPath(env.JOB_NAME), parameters: [string(name: 'SQA_CONTAINER_NAME', value: "${env.SQA_CONTAINER_NAME}")])
                 }
             }
         }
